@@ -1,0 +1,19 @@
+[project]
+name = "busline-backend"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "vitalii",email = "vitalii.lohoida@nixs.com"}
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi (>=0.128.0,<0.129.0)",
+    "sqlalchemy[asyncio] (>=2.0.45,<3.0.0)",
+    "alembic (>=1.18.1,<2.0.0)",
+    "uvicorn (>=0.40.0,<0.41.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
