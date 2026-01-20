@@ -1,0 +1,37 @@
+import logging.config
+import logging
+
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(asctime)s - %(name)s - [%(levelname)s] - %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "default",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "root": {
+        "level": "DEBUG",
+        "handlers": ["console"],
+    },
+    "loggers": {
+        "app": {
+            "level": "DEBUG",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+    },
+}
+
+
+def setup_logging():
+    """Initialize logging configuration."""
+    logging.config.dictConfig(LOGGING_CONFIG)
