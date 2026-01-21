@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
@@ -9,7 +10,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
-from app.settings.env import settings
+from app.settings.env import get_env_settings
 
 
 class Base(DeclarativeBase):
@@ -56,7 +57,18 @@ class DatabaseHelper:
             yield session
 
 
-db_helper = DatabaseHelper(
-    url=settings.DATABASE_URL,
-    echo=settings.DEBUG,
-)
+@lru_cache()
+def get_database_helper() -> DatabaseHelper:
+
+    settings = get_env_settings()
+
+    return DatabaseHelper(
+        url=settings.DATABASE_URL,
+        echo=settings.DEBUG,
+    )
+
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    db_helper = get_database_helper()
+    async with db_helper.get_db_session() as session:
+        yield session
