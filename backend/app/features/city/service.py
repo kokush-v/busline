@@ -5,15 +5,13 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.db import db_helper
+from app.database.db import get_db_session
 from app.features.city.models import City
 from app.features.city.schemas import CityCreate, CityUpdate
 
 
 class CityService:
-    def __init__(
-        self, session: Annotated[AsyncSession, Depends(db_helper.get_db_session)]
-    ):
+    def __init__(self, session: Annotated[AsyncSession, Depends(get_db_session)]):
         self._session = session
 
     async def list_cities(self) -> list[City]:
