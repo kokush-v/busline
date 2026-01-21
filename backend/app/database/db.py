@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
-from settings.env import settings
+from app.settings.env import settings
 
 
 class Base(DeclarativeBase):
@@ -35,6 +35,9 @@ class DatabaseHelper:
         if url.startswith("postgresql://") and "+asyncpg" not in url:
             return url.replace("postgresql://", "postgresql+asyncpg://", 1)
         return url
+
+    def get_db_url(self) -> str:
+        return self.url
 
     @asynccontextmanager
     async def session_scope(self) -> AsyncGenerator[AsyncSession, None]:
