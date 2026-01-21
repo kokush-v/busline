@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import StrEnum
 
 from fastapi import Depends, HTTPException, status
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     ADMIN = "admin"
     USER = "user"
 

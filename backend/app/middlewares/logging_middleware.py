@@ -1,7 +1,8 @@
 import time
 import uuid
 import structlog
-from fastapi import Request, Response
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = structlog.get_logger()
@@ -42,4 +43,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 error=str(e),
                 duration=f"{process_time:.4f}s",
             )
-            raise
+            # Return JSONResponse instead of raising to prevent uvicorn traceback duplication
+            return JSONResponse(
+                status_code=500,
+                content={"message": "Internal Server Error", "detail": str(e)},
+                headers={"X-Request-ID": request_id},
+            )

@@ -1,10 +1,11 @@
+import pytest
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 
-def _create_city(client: TestClient, name: str = "Kyiv") -> dict:
-    response = client.post(
+async def _create_city(client: AsyncClient, name: str = "Kyiv") -> dict:
+    response = await client.post(
         "/cities",
         json={"name": name, "longitude": 30.5, "latitude": 50.45},
     )
@@ -12,8 +13,9 @@ def _create_city(client: TestClient, name: str = "Kyiv") -> dict:
     return response.json()
 
 
-def test_create_city(client: TestClient):
-    response = client.post(
+@pytest.mark.asyncio
+async def test_create_city(client: AsyncClient):
+    response = await client.post(
         "/cities", json={"name": "Lviv", "longitude": 24.0, "latitude": 49.84}
     )
     assert response.status_code == 201
@@ -24,40 +26,45 @@ def test_create_city(client: TestClient):
     assert "id" in data
 
 
-def test_create_city_validation_bounds(client: TestClient):
-    response = client.post(
+@pytest.mark.asyncio
+async def test_create_city_validation_bounds(client: AsyncClient):
+    response = await client.post(
         "/cities",
         json={"name": "NorthPole", "longitude": 200.0, "latitude": 90.1},
     )
     assert response.status_code == 422
 
 
-def test_get_cities_list(client: TestClient):
-    created = _create_city(client)
+@pytest.mark.asyncio
+async def test_get_cities_list(client: AsyncClient):
+    created = await _create_city(client)
 
-    list_response = client.get("/cities")
+    list_response = await client.get("/cities")
     assert list_response.status_code == 200
     assert any(city["id"] == created["id"] for city in list_response.json())
 
 
-def test_get_city_by_id(client: TestClient):
-    created = _create_city(client)
+@pytest.mark.asyncio
+async def test_get_city_by_id(client: AsyncClient):
+    created = await _create_city(client)
 
-    detail_response = client.get(f"/cities/{created['id']}")
+    detail_response = await client.get(f"/cities/{created['id']}")
     assert detail_response.status_code == 200
     assert detail_response.json()["name"] == created["name"]
 
 
-def test_get_city_not_found(client: TestClient):
+@pytest.mark.asyncio
+async def test_get_city_not_found(client: AsyncClient):
     fake_uuid = uuid4()
-    response = client.get(f"/cities/{fake_uuid}")
+    response = await client.get(f"/cities/{fake_uuid}")
     assert response.status_code == 404
 
 
-def test_update_city(client: TestClient):
-    created = _create_city(client)
+@pytest.mark.asyncio
+async def test_update_city(client: AsyncClient):
+    created = await _create_city(client)
 
-    response = client.put(
+    response = await client.put(
         f"/cities/{created['id']}",
         json={"name": "Updated City", "longitude": 31.0},
     )
@@ -67,10 +74,11 @@ def test_update_city(client: TestClient):
     assert body["longitude"] == 31.0
 
 
-def test_update_city_partial(client: TestClient):
-    created = _create_city(client)
+@pytest.mark.asyncio
+async def test_update_city_partial(client: AsyncClient):
+    created = await _create_city(client)
 
-    response = client.put(
+    response = await client.put(
         f"/cities/{created['id']}",
         json={"name": "Only Name Updated"},
     )
@@ -80,17 +88,19 @@ def test_update_city_partial(client: TestClient):
     assert body["longitude"] == created["longitude"]
 
 
-def test_delete_city(client: TestClient):
-    created = _create_city(client)
+@pytest.mark.asyncio
+async def test_delete_city(client: AsyncClient):
+    created = await _create_city(client)
 
-    response = client.delete(f"/cities/{created['id']}")
+    response = await client.delete(f"/cities/{created['id']}")
     assert response.status_code == 204
 
-    get_response = client.get(f"/cities/{created['id']}")
+    get_response = await client.get(f"/cities/{created['id']}")
     assert get_response.status_code == 404
 
 
-def test_delete_city_not_found(client: TestClient):
+@pytest.mark.asyncio
+async def test_delete_city_not_found(client: AsyncClient):
     fake_uuid = uuid4()
-    response = client.delete(f"/cities/{fake_uuid}")
+    response = await client.delete(f"/cities/{fake_uuid}")
     assert response.status_code == 404

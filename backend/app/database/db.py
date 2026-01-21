@@ -52,10 +52,6 @@ class DatabaseHelper:
             finally:
                 await session.close()
 
-    async def get_db_session(self) -> AsyncGenerator[AsyncSession, None]:
-        async with self.session_factory() as session:
-            yield session
-
 
 @lru_cache()
 def get_database_helper() -> DatabaseHelper:
@@ -70,5 +66,5 @@ def get_database_helper() -> DatabaseHelper:
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     db_helper = get_database_helper()
-    async with db_helper.get_db_session() as session:
+    async with db_helper.session_scope() as session:
         yield session
