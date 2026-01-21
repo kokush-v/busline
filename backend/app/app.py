@@ -2,10 +2,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
-from app.log.logger_service import LoggerService
+from app.core.logging_config import setup_logging
+from app.middlewares.logging_middleware import LoggingMiddleware
 from app.features.city.route import router as city_router
+import structlog
 
-logger = LoggerService(__name__)
+setup_logging()
+
+logger = structlog.get_logger()
 
 
 def get_application() -> FastAPI:
@@ -24,6 +28,8 @@ def get_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    application.add_middleware(LoggingMiddleware)
 
     @application.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):

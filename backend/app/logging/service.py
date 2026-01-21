@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from app.config.logging_config import setup_logging
+from app.logging.config import setup_logging
 
 
 class LoggerService:
