@@ -44,12 +44,12 @@ def run_migrations_offline() -> None:
 
     """
     url = db_helper.get_db_url()
-    config.set_main_option("sqlalchemy.url", url)
+    config.set_main_option('sqlalchemy.url', url)
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        dialect_opts={'paramstyle': 'named'},
     )
 
     with context.begin_transaction():
@@ -64,11 +64,11 @@ def run_migrations_online() -> None:
 
     """
     configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = db_helper.get_db_url()
+    configuration['sqlalchemy.url'] = db_helper.get_db_url()
 
     connectable = async_engine_from_config(
         configuration,
-        prefix="sqlalchemy.",
+        prefix='sqlalchemy.',
         poolclass=pool.NullPool,
     )
 

@@ -1,5 +1,5 @@
-import uuid
 from datetime import datetime
+import uuid
 
 from sqlalchemy import DateTime, Float, String, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -9,7 +9,7 @@ from app.database.db import Base
 
 
 class City(Base):
-    __tablename__ = "cities"
+    __tablename__ = 'cities'
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

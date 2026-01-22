@@ -33,8 +33,8 @@ class DatabaseHelper:
         )
 
     def _make_async_url(self, url: str) -> str:
-        if url.startswith("postgresql://") and "+asyncpg" not in url:
-            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if url.startswith('postgresql://') and '+asyncpg' not in url:
+            return url.replace('postgresql://', 'postgresql+asyncpg://', 1)
         return url
 
     def get_db_url(self) -> str:

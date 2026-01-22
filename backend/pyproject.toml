@@ -2,48 +2,60 @@
 name = "busline-backend"
 version = "0.1.0"
 description = ""
-package-mode = false
-authors = [
-    {name = "vitalii",email = "vitalii.lohoida@nixs.com"}
-]
+readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "fastapi (>=0.128.0,<0.129.0)",
-    "aiosqlite (>=0.20.0,<1.0.0)",
-    "asyncpg (>=0.30.0,<1.0.0)",
-    "sqlalchemy[asyncio] (>=2.0.45,<3.0.0)",
-    "alembic (>=1.18.1,<2.0.0)",
-    "uvicorn (>=0.40.0,<0.41.0)",
-    "pydantic-settings (>=2.12.0,<3.0.0)",
-    "psycopg2-binary (>=2.9.11,<3.0.0)",
-    "pytest (>=8.3.0,<9.0.0)",
-    "httpx (>=0.27.2,<0.28.0)",
-    "structlog (>=25.5.0,<26.0.0)",
-    "pytest-asyncio (>=0.24.0,<0.25.0)",
-    "testcontainers[postgres] (>=4.8.0,<5.0.0)",
-    "ruff (>=0.14.13,<0.15.0)",
-    "pre-commit (>=4.5.1,<5.0.0)"
+authors = [
+    {name = "vitalii", email = "vitalii.lohoida@nixs.com"}
 ]
 
+dependencies = [
+    "fastapi[all]>=0.110.0",
+    "sqlalchemy[asyncio]>=2.0.29",
+    "alembic>=1.13.1",
+    "asyncpg>=0.29.0",
+    "structlog>=24.1.0",
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+pytest-asyncio = "^0.23.6"
+testcontainers = {extras = ["postgres"], version = "^4.3.0"}
+ruff = "^0.3.4"
+pre-commit = "^3.7.0"
+
+
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py312"
 
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
 [tool.ruff.lint]
-select = ["E", "W", "F", "B", "I", "UP", "SIM", "A"]
+select = [
+    "E",   
+    "W",   
+    "F",   
+    "I",   
+    "B",   
+    "C4",  
+    "UP",  
+    "T20", 
+]
 
 ignore = [
     "B008"
 ]
 
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]
-
-[tool.ruff.format]
-quote-style = "double"
-skip-magic-trailing-comma = false
+[tool.ruff.lint.isort]
+known-local-folder = ["tests", "app", "scripts"]
+split-on-trailing-comma = true
+combine-as-imports = true
+detect-same-package = true
+force-sort-within-sections = true
