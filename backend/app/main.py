@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 import structlog
 
+from app.features.bus.route import router as bus_router
 from app.features.city.route import router as city_router
 from app.middlewares.logging_middleware import LoggingMiddleware
 
@@ -33,6 +34,7 @@ def get_application() -> FastAPI:
             content={'message': 'Internal Server Error', 'detail': str(exc)},
         )
 
+    application.include_router(bus_router)
     application.include_router(city_router)
 
     return application

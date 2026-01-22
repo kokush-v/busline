@@ -87,37 +87,18 @@ make test-feature FEATURE=city      # Tests for 'city' feature
 
 ```
 app/
-├── __init__.py
-├── main.py                # FastAPI application factory
-├── core/
-│   └── roles.py           # User roles (StrEnum)
-├── database/
-│   ├── __init__.py
-│   └── db.py              # Async SQLAlchemy helper
-├── features/
-│   └── city/
-│       ├── models.py      # SQLAlchemy 2.0 models (Mapped)
-│       ├── route.py       # API routes
-│       ├── schemas.py     # Pydantic schemas
-│       └── service.py     # Business logic (Core-style DML)
-├── logging/
-│   ├── __init__.py
-│   ├── config.py          # Logging setup
-│   └── formatter.py       # Custom log formatter
-├── middlewares/
-│   ├── __init__.py
-│   └── logging_middleware.py
-└── settings/
-    └── env.py             # Environment configuration
+├── main.py                    # FastAPI application factory
+├── core/                      # Core utilities (roles, S3 service, etc.)
+├── database/                  # Database configuration
+├── features/                  # Feature modules (city, bus, etc.)
+├── logging/                   # Logging setup
+├── middlewares/               # Middleware components
+└── settings/                  # Environment configuration
 
 tests/
-├── conftest.py            # Pytest config and global fixtures
-├── integration/
-│   └── features/city/
-│       └── test_routes.py
-└── unit/
-    └── features/city/
-        └── test_schemas.py
+├── conftest.py                # Pytest config and global fixtures
+├── integration/               # Integration tests by feature
+└── unit/                      # Unit tests by feature
 ```
 
 ## Technologies
