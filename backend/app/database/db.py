@@ -1,6 +1,6 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from functools import lru_cache
-from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -33,8 +33,8 @@ class DatabaseHelper:
         )
 
     def _make_async_url(self, url: str) -> str:
-        if url.startswith("postgresql://") and "+asyncpg" not in url:
-            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if url.startswith('postgresql://') and '+asyncpg' not in url:
+            return url.replace('postgresql://', 'postgresql+asyncpg://', 1)
         return url
 
     def get_db_url(self) -> str:
@@ -53,9 +53,8 @@ class DatabaseHelper:
                 await session.close()
 
 
-@lru_cache()
+@lru_cache
 def get_database_helper() -> DatabaseHelper:
-
     settings = get_env_settings()
 
     return DatabaseHelper(

@@ -4,8 +4,8 @@ from fastapi import Depends, HTTPException, status
 
 
 class UserRole(StrEnum):
-    ADMIN = "admin"
-    USER = "user"
+    ADMIN = 'admin'
+    USER = 'user'
 
 
 class RoleChecker:
@@ -16,7 +16,7 @@ class RoleChecker:
         if user.role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions to perform this operation",
+                detail='Insufficient permissions to perform this operation',
             )
         return user
 

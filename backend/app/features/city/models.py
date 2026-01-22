@@ -1,15 +1,15 @@
-import uuid
 from datetime import datetime
+import uuid
 
 from sqlalchemy import DateTime, Float, String, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.db import Base
 
 
 class City(Base):
-    __tablename__ = "cities"
+    __tablename__ = 'cities'
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -20,9 +20,7 @@ class City(Base):
     name: Mapped[str] = mapped_column(String(255), unique=True)
     longitude: Mapped[float] = mapped_column(Float)
     latitude: Mapped[float] = mapped_column(Float)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -22,8 +22,9 @@ help:
 	@echo "  make test-feature     - Run tests for specific feature (FEATURE=city)"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  make lint             - Check code style (ruff) TODO: Implement ruff configuration"
-	@echo "  make format           - Format code (ruff) TODO: Implement ruff configuration"
+	@echo "  make lint             - Format and check code (ruff format + ruff check --fix)"
+	@echo "  make lint-no-format   - Check code style only (ruff check)"
+	@echo "  make format           - Format code only (ruff format)"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean            - Remove cache files and directories"
@@ -77,14 +78,16 @@ test-feature:
 	poetry run pytest tests/integration/features/$(FEATURE)/ tests/unit/features/$(FEATURE)/ -v
 
 lint:
+	@echo "🔍 Formatting and checking code..."
+	poetry run ruff format app/
+	poetry run ruff check app/ --fix
+
+lint-no-format:
 	@echo "🔍 Checking code style..."
-	@echo "TODO: Implement ruff configuration"
 	poetry run ruff check app/
 
 format:
 	@echo "✨ Formatting code..."
-	@echo "TODO: Implement ruff configuration"
-	poetry run ruff check app/ --fix
 	poetry run ruff format app/
 
 clean:

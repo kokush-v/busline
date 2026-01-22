@@ -1,28 +1,27 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
-
-from app.middlewares.logging_middleware import LoggingMiddleware
-from app.features.city.route import router as city_router
 import structlog
 
+from app.features.city.route import router as city_router
+from app.middlewares.logging_middleware import LoggingMiddleware
 
 logger = structlog.get_logger()
 
 
 def get_application() -> FastAPI:
     application = FastAPI(
-        title="Busline API",
-        version="1.0.0",
-        description="API for Busline application",
+        title='Busline API',
+        version='1.0.0',
+        description='API for Busline application',
     )
 
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=['*'],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=['*'],
+        allow_headers=['*'],
     )
 
     application.add_middleware(LoggingMiddleware)
@@ -31,7 +30,7 @@ def get_application() -> FastAPI:
     async def global_exception_handler(request: Request, exc: Exception):
         return JSONResponse(
             status_code=500,
-            content={"message": "Internal Server Error", "detail": str(exc)},
+            content={'message': 'Internal Server Error', 'detail': str(exc)},
         )
 
     application.include_router(city_router)
@@ -42,6 +41,6 @@ def get_application() -> FastAPI:
 app = get_application()
 
 
-@app.get("/health", tags=["Health"])
+@app.get('/health', tags=['Health'])
 async def health_check():
-    return {"status": "healthy", "version": "1.0.0"}
+    return {'status': 'healthy', 'version': '1.0.0'}

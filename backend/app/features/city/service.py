@@ -22,20 +22,16 @@ class CityService:
         result = await self._session.execute(select(City).where(City.id == city_id))
         city = result.scalars().one_or_none()
         if city is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="City not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='City not found')
         return city
 
     async def create_city(self, payload: CityCreate) -> City:
-        result = await self._session.execute(
-            select(City).filter(City.name == payload.name)
-        )
+        result = await self._session.execute(select(City).filter(City.name == payload.name))
         existing = result.scalar_one_or_none()
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="City with this name already exists",
+                detail='City with this name already exists',
             )
 
         stmt = insert(City).values(**payload.model_dump()).returning(City)
@@ -47,22 +43,18 @@ class CityService:
         await self.get_one_city(city_id)
 
         update_data = payload.model_dump(exclude_unset=True)
-        if "name" in update_data:
+        if 'name' in update_data:
             result = await self._session.execute(
-                select(City).filter(
-                    City.name == update_data["name"], City.id != city_id
-                )
+                select(City).filter(City.name == update_data['name'], City.id != city_id)
             )
             conflict = result.scalar_one_or_none()
             if conflict:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="City with this name already exists",
+                    detail='City with this name already exists',
                 )
 
-        stmt = (
-            update(City).where(City.id == city_id).values(**update_data).returning(City)
-        )
+        stmt = update(City).where(City.id == city_id).values(**update_data).returning(City)
         result = await self._session.execute(stmt)
         await self._session.commit()
         return result.scalars().one()
