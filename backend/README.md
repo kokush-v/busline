@@ -88,14 +88,13 @@ make test-feature FEATURE=city      # Tests for 'city' feature
 ```
 app/
 ├── __init__.py
-├── app.py                 # FastAPI Application
+├── main.py                # FastAPI application factory
 ├── core/
-│   ├── logging_config.py  # Core logging configuration
 │   └── roles.py           # User roles (StrEnum)
 ├── database/
 │   ├── __init__.py
-│   └── db.py              # Database configuration
-├── features/              # Business logic by feature
+│   └── db.py              # Async SQLAlchemy helper
+├── features/
 │   └── city/
 │       ├── models.py      # SQLAlchemy 2.0 models (Mapped)
 │       ├── route.py       # API routes
@@ -104,7 +103,7 @@ app/
 ├── logging/
 │   ├── __init__.py
 │   ├── config.py          # Logging setup
-│   └── service.py         # Centralized logging service
+│   └── formatter.py       # Custom log formatter
 ├── middlewares/
 │   ├── __init__.py
 │   └── logging_middleware.py
@@ -113,10 +112,10 @@ app/
 
 tests/
 ├── conftest.py            # Pytest config and global fixtures
-├── integration/           # Integration tests
+├── integration/
 │   └── features/city/
 │       └── test_routes.py
-└── unit/                  # Unit tests
+└── unit/
     └── features/city/
         └── test_schemas.py
 ```
