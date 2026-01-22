@@ -35,12 +35,11 @@ install:
 
 dev:
 	@echo "🔨 Starting development server..."
-	poetry run uvicorn app.app:app --reload --host 0.0.0.0 --port 8000 --no-access-log
+	poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --no-access-log
 
 run:
 	@echo "🚀 Starting production server..."
-	poetry run uvicorn app.app:app --host 0.0.0.0 --port 8000 --no-access-log
-
+	poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log
 migrate:
 	@echo "🗄️  Running database migrations..."
 	poetry run alembic upgrade head

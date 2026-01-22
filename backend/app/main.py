@@ -25,6 +25,8 @@ def get_application() -> FastAPI:
         allow_headers=["*"],
     )
 
+    application.add_middleware(LoggingMiddleware)
+
     @application.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         return JSONResponse(
