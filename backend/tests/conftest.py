@@ -1,12 +1,11 @@
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
-from app.main import app
 from app.database.db import Base, get_db_session
+from app.main import app
 
 
 @pytest.fixture(scope="session", autouse=True)

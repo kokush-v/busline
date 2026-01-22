@@ -1,11 +1,9 @@
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
 from app.features.city.schemas import CityCreate, CityRead, CityUpdate
 from app.features.city.service import CityService
-
 
 router = APIRouter(prefix="/cities", tags=["Cities"])
 
@@ -33,9 +31,7 @@ async def create_city(payload: CityCreate, service: CityService = Depends()):
     "/{city_id}",
     response_model=CityRead,
 )
-async def update_city(
-    city_id: UUID, payload: CityUpdate, service: CityService = Depends()
-):
+async def update_city(city_id: UUID, payload: CityUpdate, service: CityService = Depends()):
     return await service.update_city(city_id, payload)
 
 

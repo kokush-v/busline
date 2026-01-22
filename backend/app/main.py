@@ -1,11 +1,10 @@
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
-from app.middlewares.logging_middleware import LoggingMiddleware
 from app.features.city.route import router as city_router
-import structlog
-
+from app.middlewares.logging_middleware import LoggingMiddleware
 
 logger = structlog.get_logger()
 

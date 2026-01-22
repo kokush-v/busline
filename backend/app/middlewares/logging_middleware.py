@@ -1,5 +1,6 @@
 import time
 import uuid
+
 import structlog
 from fastapi import Request
 from fastapi.responses import JSONResponse

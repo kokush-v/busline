@@ -1,13 +1,14 @@
 from functools import lru_cache
 from typing import Any
+
 from app.settings.env import get_env_settings
 
 
 @lru_cache
 def get_uvicorn_logging_config() -> tuple[dict[str, Any] | None, str]:
     """
-    Return a logging config derived from Uvicorn's default configuration, with the root logger routed through JSON
-    or text console handlers.
+    Return a logging config derived from Uvicorn's default configuration,
+    with the root logger routed through JSON or text console handlers.
     """
 
     settings = get_env_settings()
