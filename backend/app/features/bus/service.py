@@ -1,4 +1,3 @@
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, UploadFile, status
@@ -22,8 +21,8 @@ from app.settings.env import get_env_settings
 class BusService:
     def __init__(
         self,
-        session: Annotated[AsyncSession, Depends(get_db_session)],
-        s3_service: Annotated[S3Service, Depends(get_s3_service)],
+        session: AsyncSession = Depends(get_db_session),
+        s3_service: S3Service = Depends(get_s3_service),
     ):
         self._session = session
         self._settings = get_env_settings()

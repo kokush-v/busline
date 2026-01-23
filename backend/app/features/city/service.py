@@ -1,4 +1,3 @@
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -11,7 +10,7 @@ from app.features.city.schemas import CityCreate, CityUpdate
 
 
 class CityService:
-    def __init__(self, session: Annotated[AsyncSession, Depends(get_db_session)]):
+    def __init__(self, session: AsyncSession = Depends(get_db_session)):
         self._session = session
 
     async def get_many_cities(self) -> list[City]:
