@@ -64,7 +64,6 @@ async def delete_bus(bus_id: UUID, service: BusService = Depends()):
     response_model=PresignedUrlResponse,
 )
 async def get_image_upload_url(request: PresignedUrlRequest, service: BusService = Depends()):
-    """Generate a presigned URL for image upload."""
     return await service.generate_presigned_upload_url(request)
 
 
