@@ -122,7 +122,9 @@ class BusService:
             ) from e
 
     async def update_media_urls(self, bus_id: UUID, photo_key: str) -> Bus:
-        await self.get_one_bus(bus_id)
+        bus = await self.get_one_bus(bus_id)
+
+        await self._delete_old_media(bus)
 
         photo_url = (
             f'https://{self._settings.S3_PHOTOS_BUCKET}.s3.{self._settings.AWS_REGION}.amazonaws.com/{photo_key}'
@@ -154,6 +156,20 @@ class BusService:
         stmt = update(Bus).where(Bus.id == bus_id).values(photo_url=None).returning(Bus)
         await self._session.execute(stmt)
         await self._session.commit()
+
+    async def _delete_old_media(self, bus: Bus) -> None:
+        """Helper to delete old photo and thumbnail from S3."""
+        if bus.photo_url:
+            photo_key = self._s3_service.extract_key_from_url(bus.photo_url, self._settings.S3_PHOTOS_BUCKET)
+            if photo_key:
+                self._s3_service.delete_object(self._settings.S3_PHOTOS_BUCKET, photo_key)
+
+        if bus.thumbnail_url:
+            thumbnail_key = self._s3_service.extract_key_from_url(
+                bus.thumbnail_url, self._settings.S3_THUMBNAILS_BUCKET
+            )
+            if thumbnail_key:
+                self._s3_service.delete_object(self._settings.S3_THUMBNAILS_BUCKET, thumbnail_key)
 
     async def test_upload_to_s3(self, request: TestUploadRequest, file: UploadFile) -> dict:
         """Test endpoint to upload a file to S3 using presigned URL."""
