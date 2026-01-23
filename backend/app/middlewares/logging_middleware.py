@@ -1,12 +1,15 @@
+from pathlib import Path
 import time
 import uuid
 
 from fastapi import Request
-from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import structlog
 
 logger = structlog.get_logger()
+
+# Ensure logs directory exists
+Path('logs').mkdir(exist_ok=True)
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -24,28 +27,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             path=request.url.path,
         )
 
-        try:
-            response = await call_next(request)
-            process_time = time.perf_counter() - start_time
+        response = await call_next(request)
+        process_time = time.perf_counter() - start_time
 
-            response.headers['X-Request-ID'] = request_id
+        response.headers['X-Request-ID'] = request_id
 
-            await logger.ainfo(
-                'http_request_end',
-                status_code=response.status_code,
-                duration=f'{process_time:.4f}s',
-            )
-            return response
-
-        except Exception as e:
-            process_time = time.perf_counter() - start_time
-            await logger.aexception(
-                'http_request_error',
-                error=str(e),
-                duration=f'{process_time:.4f}s',
-            )
-            return JSONResponse(
-                status_code=500,
-                content={'message': 'Internal Server Error', 'detail': str(e)},
-                headers={'X-Request-ID': request_id},
-            )
+        await logger.ainfo(
+            'http_request_end',
+            status_code=response.status_code,
+            duration=f'{process_time:.4f}s',
+        )
+        return response
