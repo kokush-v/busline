@@ -10,14 +10,18 @@ from app.features.city.schemas import CityCreate, CityUpdate
 
 
 class CityService:
+    """Service for managing city operations."""
+
     def __init__(self, session: AsyncSession = Depends(get_db_session)):
         self._session = session
 
     async def get_cities(self) -> list[City]:
+        """Get all cities."""
         result = await self._session.execute(select(City))
         return list(result.scalars().all())
 
     async def get_city(self, city_id: UUID) -> City:
+        """Get a specific city by ID."""
         result = await self._session.execute(select(City).where(City.id == city_id))
         city = result.scalars().one_or_none()
         if city is None:
@@ -25,6 +29,7 @@ class CityService:
         return city
 
     async def create_city(self, payload: CityCreate) -> City:
+        """Create a new city."""
         result = await self._session.execute(select(City).filter(City.name == payload.name))
         existing = result.scalar_one_or_none()
         if existing:
@@ -39,6 +44,7 @@ class CityService:
         return result.scalars().one()
 
     async def update_city(self, city_id: UUID, payload: CityUpdate) -> City:
+        """Update a city."""
         await self.get_city(city_id)
 
         update_data = payload.model_dump(exclude_unset=True)
@@ -59,6 +65,7 @@ class CityService:
         return result.scalars().one()
 
     async def delete_city(self, city_id: UUID) -> None:
+        """Delete a city."""
         await self.get_city(city_id)
         stmt = delete(City).where(City.id == city_id)
         await self._session.execute(stmt)

@@ -9,6 +9,8 @@ from app.database.db import Base
 
 
 class Bus(Base):
+    """Represents a bus with its properties and media."""
+
     __tablename__ = 'buses'
 
     id: Mapped[uuid.UUID] = mapped_column(

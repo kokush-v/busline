@@ -19,6 +19,8 @@ from app.settings.env import get_env_settings
 
 
 class BusService:
+    """Service for managing bus operations and media uploads."""
+
     def __init__(
         self,
         session: AsyncSession = Depends(get_db_session),
@@ -29,10 +31,12 @@ class BusService:
         self._s3_service = s3_service
 
     async def get_buses(self) -> list[Bus]:
+        """Get all buses."""
         result = await self._session.execute(select(Bus))
         return list(result.scalars().all())
 
     async def get_bus(self, bus_id: UUID) -> Bus:
+        """Get a specific bus by ID."""
         result = await self._session.execute(select(Bus).where(Bus.id == bus_id))
         bus = result.scalars().one_or_none()
         if bus is None:
@@ -40,6 +44,7 @@ class BusService:
         return bus
 
     async def create_bus(self, payload: BusCreate) -> Bus:
+        """Create a new bus."""
         result = await self._session.execute(select(Bus).filter(Bus.number_plate == payload.number_plate))
         existing = result.scalar_one_or_none()
         if existing:
@@ -54,6 +59,7 @@ class BusService:
         return result.scalars().one()
 
     async def update_bus(self, bus_id: UUID, payload: BusUpdate) -> Bus:
+        """Update a bus."""
         await self.get_bus(bus_id)
 
         update_data = payload.model_dump(exclude_unset=True)
@@ -74,6 +80,7 @@ class BusService:
         return result.scalars().one()
 
     async def delete_bus(self, bus_id: UUID) -> None:
+        """Delete a bus and its media."""
         bus = await self.get_bus(bus_id)
 
         if bus.photo_url:
@@ -108,6 +115,7 @@ class BusService:
         )
 
     async def update_media_urls(self, bus_id: UUID, photo_key: str) -> Bus:
+        """Update bus media URLs after successful upload."""
         bus = await self.get_bus(bus_id)
 
         await self._delete_old_media(bus)

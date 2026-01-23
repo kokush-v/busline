@@ -1,8 +1,8 @@
-from datetime import datetime
 from typing import Annotated
-from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from app.common.schemas import EntityModel
 
 
 class BusBase(BaseModel):
@@ -21,14 +21,9 @@ class BusUpdate(BaseModel):
     number_plate: str | None = Field(None, min_length=1, max_length=20)
 
 
-class BusRead(BusBase):
-    id: UUID
+class BusRead(BusBase, EntityModel):
     photo_url: str | None = None
     thumbnail_url: str | None = None
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class PresignedUrlRequest(BaseModel):
