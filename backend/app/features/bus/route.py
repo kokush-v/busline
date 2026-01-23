@@ -59,7 +59,7 @@ async def delete_bus(bus_id: UUID, service: BusService = Depends()):
     response_model=PresignedUrlResponse,
 )
 async def get_image_upload_url(request: PresignedUrlRequest, service: BusService = Depends()):
-    return service.generate_presigned_upload_url(request)
+    return await service.generate_presigned_upload_url(request)
 
 
 @router.post(
@@ -82,11 +82,10 @@ async def delete_image(bus_id: UUID, service: BusService = Depends()):
 @router.post('/test-upload', response_model=dict)
 async def test_upload_to_s3(
     upload_url: str = Form(...),
-    fields: str = Form(...),  # JSON string
+    fields: str = Form(...),
     file: UploadFile = File(...),
     service: BusService = Depends(),
 ):
-    """Test endpoint to upload file to S3 using presigned URL data."""
     import json
 
     fields_dict = json.loads(fields)

@@ -44,7 +44,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 error=str(e),
                 duration=f'{process_time:.4f}s',
             )
-            # Return JSONResponse instead of raising to prevent uvicorn traceback duplication
             return JSONResponse(
                 status_code=500,
                 content={'message': 'Internal Server Error', 'detail': str(e)},

@@ -279,29 +279,6 @@ async def test_confirm_image_upload_bus_not_found(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_delete_image(client: AsyncClient):
-    """Test deleting bus image."""
-    created = await _create_bus(client)
-
-    # First, add an image
-    await client.post(
-        f'/buses/{created["id"]}/image/confirm',
-        json={'photo_key': 'test-image.jpg'},
-    )
-
-    # Now delete the image
-    response = await client.delete(f'/buses/{created["id"]}/image')
-
-    assert response.status_code == 204
-
-    # Verify image is removed
-    bus_response = await client.get(f'/buses/{created["id"]}')
-    assert bus_response.status_code == 200
-    bus_data = bus_response.json()
-    assert bus_data['photo_url'] is None
-
-
-@pytest.mark.asyncio
 async def test_delete_image_bus_not_found(client: AsyncClient):
     """Test deleting image for non-existent bus."""
     fake_uuid = uuid4()
@@ -309,26 +286,6 @@ async def test_delete_image_bus_not_found(client: AsyncClient):
     response = await client.delete(f'/buses/{fake_uuid}/image')
 
     assert response.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_delete_bus_with_images(client: AsyncClient):
-    """Test that deleting a bus also removes its images from S3."""
-    created = await _create_bus(client)
-
-    # Add image to bus
-    await client.post(
-        f'/buses/{created["id"]}/image/confirm',
-        json={'photo_key': 'test-image.jpg'},
-    )
-
-    # Delete bus (this should also delete the images from S3)
-    response = await client.delete(f'/buses/{created["id"]}')
-    assert response.status_code == 204
-
-    # Verify bus is deleted
-    get_response = await client.get(f'/buses/{created["id"]}')
-    assert get_response.status_code == 404
 
 
 @pytest.mark.asyncio

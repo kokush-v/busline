@@ -79,20 +79,20 @@ class BusService:
         if bus.photo_url:
             photo_key = self._s3_service.extract_key_from_url(bus.photo_url, self._settings.S3_PHOTOS_BUCKET)
             if photo_key:
-                self._s3_service.delete_object(self._settings.S3_PHOTOS_BUCKET, photo_key)
+                await self._s3_service.delete_object(self._settings.S3_PHOTOS_BUCKET, photo_key)
 
         if bus.thumbnail_url:
             thumbnail_key = self._s3_service.extract_key_from_url(
                 bus.thumbnail_url, self._settings.S3_THUMBNAILS_BUCKET
             )
             if thumbnail_key:
-                self._s3_service.delete_object(self._settings.S3_THUMBNAILS_BUCKET, thumbnail_key)
+                await self._s3_service.delete_object(self._settings.S3_THUMBNAILS_BUCKET, thumbnail_key)
 
         stmt = delete(Bus).where(Bus.id == bus_id)
         await self._session.execute(stmt)
         await self._session.commit()
 
-    def generate_presigned_upload_url(self, request: PresignedUrlRequest) -> PresignedUrlResponse:
+    async def generate_presigned_upload_url(self, request: PresignedUrlRequest) -> PresignedUrlResponse:
         """Generate a presigned URL for uploading a photo to S3."""
         allowed_content_types = ['image/jpeg', 'image/png']
         if request.content_type not in allowed_content_types:
@@ -102,7 +102,7 @@ class BusService:
             )
 
         try:
-            presigned_post = self._s3_service.generate_presigned_upload_url(
+            presigned_post = await self._s3_service.generate_presigned_upload_url(
                 bucket=self._settings.S3_PHOTOS_BUCKET,
                 key=request.filename,
                 content_type=request.content_type,
@@ -150,7 +150,7 @@ class BusService:
         if bus.photo_url:
             photo_key = self._s3_service.extract_key_from_url(bus.photo_url, self._settings.S3_PHOTOS_BUCKET)
             if photo_key:
-                self._s3_service.delete_object(self._settings.S3_PHOTOS_BUCKET, photo_key)
+                await self._s3_service.delete_object(self._settings.S3_PHOTOS_BUCKET, photo_key)
 
         stmt = update(Bus).where(Bus.id == bus_id).values(photo_url=None).returning(Bus)
         await self._session.execute(stmt)
@@ -161,14 +161,14 @@ class BusService:
         if bus.photo_url:
             photo_key = self._s3_service.extract_key_from_url(bus.photo_url, self._settings.S3_PHOTOS_BUCKET)
             if photo_key:
-                self._s3_service.delete_object(self._settings.S3_PHOTOS_BUCKET, photo_key)
+                await self._s3_service.delete_object(self._settings.S3_PHOTOS_BUCKET, photo_key)
 
         if bus.thumbnail_url:
             thumbnail_key = self._s3_service.extract_key_from_url(
                 bus.thumbnail_url, self._settings.S3_THUMBNAILS_BUCKET
             )
             if thumbnail_key:
-                self._s3_service.delete_object(self._settings.S3_THUMBNAILS_BUCKET, thumbnail_key)
+                await self._s3_service.delete_object(self._settings.S3_THUMBNAILS_BUCKET, thumbnail_key)
 
     async def test_upload_to_s3(self, request: TestUploadRequest, file: UploadFile) -> dict:
         """Test endpoint to upload a file to S3 using presigned URL."""
