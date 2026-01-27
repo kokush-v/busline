@@ -3,9 +3,8 @@ from urllib.parse import urlparse
 
 import aioboto3
 from botocore.config import Config
-from botocore.exceptions import ClientError
-from fastapi import HTTPException, status
 
+from app.core.decorators import ErrorType, handle_errors
 from app.settings.env import get_env_settings
 
 
@@ -27,6 +26,7 @@ class S3Service:
             'config': Config(signature_version='s3v4'),
         }
 
+    @handle_errors(ErrorType.STORAGE)
     async def generate_presigned_upload_url(
         self,
         bucket: str,
@@ -37,35 +37,27 @@ class S3Service:
         """
         Generate a presigned URL for uploading a file to S3.
         """
-        try:
-            async with self._session.client(**self._client_kwargs) as s3_client:
-                presigned_post = await s3_client.generate_presigned_post(
-                    Bucket=bucket,
-                    Key=key,
-                    Fields={'Content-Type': content_type},
-                    Conditions=[
-                        {'Content-Type': content_type},
-                        ['content-length-range', 1, max_size],
-                    ],
-                    ExpiresIn=self._settings.S3_PRESIGNED_URL_EXPIRATION,
-                )
-                return presigned_post
-        except ClientError as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f'Failed to generate upload URL: {str(e)}',
-            ) from e
+        async with self._session.client(**self._client_kwargs) as s3_client:
+            presigned_post = await s3_client.generate_presigned_post(
+                Bucket=bucket,
+                Key=key,
+                Fields={'Content-Type': content_type},
+                Conditions=[
+                    {'Content-Type': content_type},
+                    ['content-length-range', 1, max_size],
+                ],
+                ExpiresIn=self._settings.S3_PRESIGNED_URL_EXPIRATION,
+            )
+            return presigned_post
 
+    @handle_errors(ErrorType.STORAGE)
     async def delete_object(self, bucket: str, key: str) -> bool:
         """
         Delete an object from S3 asynchronously.
         """
-        try:
-            async with self._session.client(**self._client_kwargs) as s3_client:
-                await s3_client.delete_object(Bucket=bucket, Key=key)
-                return True
-        except ClientError:
-            return False
+        async with self._session.client(**self._client_kwargs) as s3_client:
+            await s3_client.delete_object(Bucket=bucket, Key=key)
+            return True
 
     def get_object_url(self, bucket: str, key: str) -> str:
         """

@@ -5,6 +5,7 @@ import httpx
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.decorators import ErrorType, handle_errors
 from app.core.s3_service import S3Service, get_s3_service
 from app.database.db import get_db_session
 from app.features.bus.models import Bus
@@ -28,10 +29,12 @@ class BusService:
         self._settings = get_env_settings()
         self._s3_service = s3_service
 
+    @handle_errors(ErrorType.DATABASE)
     async def get_many_buses(self) -> list[Bus]:
         result = await self._session.execute(select(Bus))
         return list(result.scalars().all())
 
+    @handle_errors(ErrorType.DATABASE)
     async def get_one_bus(self, bus_id: UUID) -> Bus:
         result = await self._session.execute(select(Bus).where(Bus.id == bus_id))
         bus = result.scalars().one_or_none()
@@ -39,6 +42,7 @@ class BusService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Bus not found')
         return bus
 
+    @handle_errors(ErrorType.DATABASE)
     async def create_bus(self, payload: BusCreate) -> Bus:
         result = await self._session.execute(select(Bus).filter(Bus.number_plate == payload.number_plate))
         existing = result.scalar_one_or_none()
@@ -53,6 +57,7 @@ class BusService:
         await self._session.commit()
         return result.scalars().one()
 
+    @handle_errors(ErrorType.DATABASE)
     async def update_bus(self, bus_id: UUID, payload: BusUpdate) -> Bus:
         await self.get_one_bus(bus_id)
 
@@ -73,6 +78,7 @@ class BusService:
         await self._session.commit()
         return result.scalars().one()
 
+    @handle_errors(ErrorType.DATABASE, ErrorType.STORAGE)
     async def delete_bus(self, bus_id: UUID) -> None:
         bus = await self.get_one_bus(bus_id)
 
@@ -92,6 +98,7 @@ class BusService:
         await self._session.execute(stmt)
         await self._session.commit()
 
+    @handle_errors(ErrorType.STORAGE)
     async def generate_presigned_upload_url(self, request: PresignedUrlRequest) -> PresignedUrlResponse:
         """Generate a presigned URL for uploading a photo to S3."""
         allowed_content_types = ['image/jpeg', 'image/png']
@@ -101,25 +108,20 @@ class BusService:
                 detail=f'Invalid content type. Allowed types: {", ".join(allowed_content_types)}',
             )
 
-        try:
-            presigned_post = await self._s3_service.generate_presigned_upload_url(
-                bucket=self._settings.S3_PHOTOS_BUCKET,
-                key=request.filename,
-                content_type=request.content_type,
-                max_size=10485760,  # 10MB
-            )
+        presigned_post = await self._s3_service.generate_presigned_upload_url(
+            bucket=self._settings.S3_PHOTOS_BUCKET,
+            key=request.filename,
+            content_type=request.content_type,
+            max_size=10485760,  # 10MB
+        )
 
-            return PresignedUrlResponse(
-                upload_url=presigned_post['url'],
-                photo_key=request.filename,
-                fields=presigned_post['fields'],
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f'Failed to generate presigned URL: {e}',
-            ) from e
+        return PresignedUrlResponse(
+            upload_url=presigned_post['url'],
+            photo_key=request.filename,
+            fields=presigned_post['fields'],
+        )
 
+    @handle_errors(ErrorType.DATABASE, ErrorType.STORAGE)
     async def update_media_urls(self, bus_id: UUID, photo_key: str) -> Bus:
         bus = await self.get_one_bus(bus_id)
 
@@ -143,6 +145,7 @@ class BusService:
         """Confirm image upload/update and update bus record with photo URL."""
         return await self.update_media_urls(bus_id, photo_key)
 
+    @handle_errors(ErrorType.DATABASE, ErrorType.STORAGE)
     async def delete_image(self, bus_id: UUID) -> None:
         """Delete the image for a bus."""
         bus = await self.get_one_bus(bus_id)
@@ -156,6 +159,7 @@ class BusService:
         await self._session.execute(stmt)
         await self._session.commit()
 
+    @handle_errors(ErrorType.STORAGE)
     async def _delete_old_media(self, bus: Bus) -> None:
         """Helper to delete old photo and thumbnail from S3."""
         if bus.photo_url:

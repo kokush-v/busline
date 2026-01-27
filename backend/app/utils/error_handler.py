@@ -2,6 +2,8 @@ from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from app.core.exceptions import DatabaseError, StorageError
+
 
 def normalize_error(exc: Exception) -> tuple[int, str]:
     """
@@ -11,6 +13,12 @@ def normalize_error(exc: Exception) -> tuple[int, str]:
     Returns:
         tuple[int, str]: HTTP status code and error message
     """
+    if isinstance(exc, DatabaseError):
+        return status.HTTP_503_SERVICE_UNAVAILABLE, 'Database connection error. Please try again later.'
+
+    if isinstance(exc, StorageError):
+        return status.HTTP_503_SERVICE_UNAVAILABLE, 'Storage service error. Please try again later.'
+
     if isinstance(exc, IntegrityError):
         return status.HTTP_409_CONFLICT, 'Data conflict: Record already exists.'
 
