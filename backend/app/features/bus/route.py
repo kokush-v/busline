@@ -20,13 +20,13 @@ admin_only = RoleChecker([UserRole.ADMIN])
 
 
 @router.get('', response_model=list[BusRead])
-async def get_many_buses(service: BusService = Depends()):
-    return await service.get_many_buses()
+async def get_buses(service: BusService = Depends()):
+    return await service.get_buses()
 
 
 @router.get('/{bus_id}', response_model=BusRead)
-async def get_one_bus(bus_id: UUID, service: BusService = Depends()):
-    return await service.get_one_bus(bus_id)
+async def get_bus(bus_id: UUID, service: BusService = Depends()):
+    return await service.get_bus(bus_id)
 
 
 @router.post(

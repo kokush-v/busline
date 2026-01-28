@@ -28,11 +28,11 @@ class BusService:
         self._settings = get_env_settings()
         self._s3_service = s3_service
 
-    async def get_many_buses(self) -> list[Bus]:
+    async def get_buses(self) -> list[Bus]:
         result = await self._session.execute(select(Bus))
         return list(result.scalars().all())
 
-    async def get_one_bus(self, bus_id: UUID) -> Bus:
+    async def get_bus(self, bus_id: UUID) -> Bus:
         result = await self._session.execute(select(Bus).where(Bus.id == bus_id))
         bus = result.scalars().one_or_none()
         if bus is None:
@@ -54,7 +54,7 @@ class BusService:
         return result.scalars().one()
 
     async def update_bus(self, bus_id: UUID, payload: BusUpdate) -> Bus:
-        await self.get_one_bus(bus_id)
+        await self.get_bus(bus_id)
 
         update_data = payload.model_dump(exclude_unset=True)
         if 'number_plate' in update_data:
@@ -74,7 +74,7 @@ class BusService:
         return result.scalars().one()
 
     async def delete_bus(self, bus_id: UUID) -> None:
-        bus = await self.get_one_bus(bus_id)
+        bus = await self.get_bus(bus_id)
 
         if bus.photo_url:
             photo_key = self._s3_service.extract_key_from_url(bus.photo_url, self._settings.S3_PHOTOS_BUCKET)
@@ -94,13 +94,6 @@ class BusService:
 
     async def generate_presigned_upload_url(self, request: PresignedUrlRequest) -> PresignedUrlResponse:
         """Generate a presigned URL for uploading a photo to S3."""
-        allowed_content_types = ['image/jpeg', 'image/png']
-        if request.content_type not in allowed_content_types:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f'Invalid content type. Allowed types: {", ".join(allowed_content_types)}',
-            )
-
         presigned_post = await self._s3_service.generate_presigned_upload_url(
             bucket=self._settings.S3_PHOTOS_BUCKET,
             key=request.filename,
@@ -115,7 +108,7 @@ class BusService:
         )
 
     async def update_media_urls(self, bus_id: UUID, photo_key: str) -> Bus:
-        bus = await self.get_one_bus(bus_id)
+        bus = await self.get_bus(bus_id)
 
         await self._delete_old_media(bus)
 
@@ -139,7 +132,7 @@ class BusService:
 
     async def delete_image(self, bus_id: UUID) -> None:
         """Delete the image for a bus."""
-        bus = await self.get_one_bus(bus_id)
+        bus = await self.get_bus(bus_id)
 
         if bus.photo_url:
             photo_key = self._s3_service.extract_key_from_url(bus.photo_url, self._settings.S3_PHOTOS_BUCKET)
