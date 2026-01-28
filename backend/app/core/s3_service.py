@@ -13,22 +13,8 @@ from app.settings.env import get_env_settings
 class S3Service:
     """Service for handling AWS S3 operations asynchronously."""
 
-    """Service for handling AWS S3 operations asynchronously."""
-
     def __init__(self):
         self._settings = get_env_settings()
-        self._session = aioboto3.Session()
-
-    @property
-    def _client_kwargs(self):
-        """Common arguments for initializing the S3 client."""
-        return {
-            'service_name': 's3',
-            'aws_access_key_id': self._settings.AWS_ACCESS_KEY_ID,
-            'aws_secret_access_key': self._settings.AWS_SECRET_ACCESS_KEY,
-            'region_name': self._settings.AWS_REGION,
-            'config': Config(signature_version='s3v4'),
-        }
         self._session = aioboto3.Session()
 
     @property
@@ -68,7 +54,8 @@ class S3Service:
         except ClientError as e:
             raise S3Exception(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f'Failed to generate upload URL: {str(e)}',
+                message='Failed to generate presigned upload URL',
+                details={'error': str(e)},
             ) from e
 
     async def delete_object(self, bucket: str, key: str) -> bool:
@@ -79,11 +66,8 @@ class S3Service:
             async with self._session.client(**self._client_kwargs) as s3_client:
                 await s3_client.delete_object(Bucket=bucket, Key=key)
                 return True
-        except ClientError as e:
-            raise S3Exception(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail='Failed to delete object from S3',
-            ) from e
+        except ClientError:
+            return False
 
     def get_object_url(self, bucket: str, key: str) -> str:
         """

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,16 +30,13 @@ class StopService:
     async def get_one_stop(self, stop_id: UUID) -> Stop:
         """Get a specific stop by ID."""
         result = await self._session.execute(select(Stop).where(Stop.id == stop_id))
-        stop = result.scalars().one_or_none()
-        if stop is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Stop not found')
+        stop = result.scalars().one()
         return stop
 
     async def create_stop(self, payload: StopCreate) -> Stop:
         """Create a new stop."""
         city_result = await self._session.execute(select(City).where(City.id == payload.city_id))
-        if city_result.scalars().one_or_none() is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='City not found')
+        city_result.scalars().one()
 
         stmt = insert(Stop).values(**payload.model_dump()).returning(Stop)
         result = await self._session.execute(stmt)
@@ -52,8 +49,7 @@ class StopService:
 
         if payload.city_id is not None:
             city_result = await self._session.execute(select(City).where(City.id == payload.city_id))
-            if city_result.scalars().one_or_none() is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='City not found')
+            city_result.scalars().one()
 
         update_data = payload.model_dump(exclude_unset=True)
         if update_data:

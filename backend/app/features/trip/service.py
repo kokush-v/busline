@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,17 +26,13 @@ class TripService:
     async def get_one_trip(self, trip_id: UUID) -> Trip:
         """Get a specific trip by ID."""
         result = await self._session.execute(select(Trip).where(Trip.id == trip_id))
-        trip = result.scalars().one_or_none()
-        if trip is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Trip not found')
+        trip = result.scalars().one()
         return trip
 
     async def create_trip(self, payload: TripCreate) -> Trip:
         """Create a new trip with associated stops."""
         bus_result = await self._session.execute(select(Bus).where(Bus.id == payload.bus_id))
-        bus = bus_result.scalars().one_or_none()
-        if bus is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Bus not found')
+        bus = bus_result.scalars().one()
 
         trip_data = {
             'bus_id': payload.bus_id,
@@ -58,10 +54,8 @@ class TripService:
 
         if payload.bus_id is not None:
             bus_result = await self._session.execute(select(Bus).where(Bus.id == payload.bus_id))
-            bus = bus_result.scalars().one_or_none()
-            if bus is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Bus not found')
-            update_data['bus_id'] = payload.bus_id
+            bus = bus_result.scalars().one()
+            update_data['bus_id'] = bus.id
 
         if update_data:
             stmt = update(Trip).where(Trip.id == trip_id).values(**update_data).returning(Trip)

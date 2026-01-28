@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,20 +23,13 @@ class CityService:
     async def get_city(self, city_id: UUID) -> City:
         """Get a specific city by ID."""
         result = await self._session.execute(select(City).where(City.id == city_id))
-        city = result.scalars().one_or_none()
-        if city is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='City not found')
+        city = result.scalars().one()
         return city
 
     async def create_city(self, payload: CityCreate) -> City:
         """Create a new city."""
         result = await self._session.execute(select(City).filter(City.name == payload.name))
-        existing = result.scalar_one_or_none()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='City with this name already exists',
-            )
+        result.scalar_one()
 
         stmt = insert(City).values(**payload.model_dump()).returning(City)
         result = await self._session.execute(stmt)
@@ -52,12 +45,7 @@ class CityService:
             result = await self._session.execute(
                 select(City).filter(City.name == update_data['name'], City.id != city_id)
             )
-            conflict = result.scalar_one_or_none()
-            if conflict:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail='City with this name already exists',
-                )
+            result.scalar_one()
 
         stmt = update(City).where(City.id == city_id).values(**update_data).returning(City)
         result = await self._session.execute(stmt)

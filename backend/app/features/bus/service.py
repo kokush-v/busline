@@ -38,20 +38,13 @@ class BusService:
     async def get_bus(self, bus_id: UUID) -> Bus:
         """Get a specific bus by ID."""
         result = await self._session.execute(select(Bus).where(Bus.id == bus_id))
-        bus = result.scalars().one_or_none()
-        if bus is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Bus not found')
+        bus = result.scalars().one()
         return bus
 
     async def create_bus(self, payload: BusCreate) -> Bus:
         """Create a new bus."""
         result = await self._session.execute(select(Bus).filter(Bus.number_plate == payload.number_plate))
-        existing = result.scalar_one_or_none()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Bus with this number plate already exists',
-            )
+        result.scalar_one()
 
         stmt = insert(Bus).values(**payload.model_dump()).returning(Bus)
         result = await self._session.execute(stmt)
@@ -67,12 +60,7 @@ class BusService:
             result = await self._session.execute(
                 select(Bus).filter(Bus.number_plate == update_data['number_plate'], Bus.id != bus_id)
             )
-            conflict = result.scalar_one_or_none()
-            if conflict:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail='Bus with this number plate already exists',
-                )
+            result.scalar_one()
 
         stmt = update(Bus).where(Bus.id == bus_id).values(**update_data).returning(Bus)
         result = await self._session.execute(stmt)
