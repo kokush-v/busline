@@ -19,7 +19,7 @@ class LogEntry(BaseModel):
 class LogsJSONFormatter(logging.Formatter):
     """JSON formatter that includes OpenTelemetry trace and span IDs when present."""
 
-    def format(self, record: logging.LogRecord) -> str:  # type: ignore[override]
+    def format(self, record: logging.LogRecord) -> str:
         return LogEntry(
             timestamp=self.formatTime(record, '%Y-%m-%dT%H:%M:%S%z'),
             name=record.name,

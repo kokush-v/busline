@@ -1,4 +1,3 @@
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -11,14 +10,14 @@ from app.features.city.schemas import CityCreate, CityUpdate
 
 
 class CityService:
-    def __init__(self, session: Annotated[AsyncSession, Depends(get_db_session)]):
+    def __init__(self, session: AsyncSession = Depends(get_db_session)):
         self._session = session
 
-    async def get_many_cities(self) -> list[City]:
+    async def get_cities(self) -> list[City]:
         result = await self._session.execute(select(City))
         return list(result.scalars().all())
 
-    async def get_one_city(self, city_id: UUID) -> City:
+    async def get_city(self, city_id: UUID) -> City:
         result = await self._session.execute(select(City).where(City.id == city_id))
         city = result.scalars().one_or_none()
         if city is None:
@@ -40,7 +39,7 @@ class CityService:
         return result.scalars().one()
 
     async def update_city(self, city_id: UUID, payload: CityUpdate) -> City:
-        await self.get_one_city(city_id)
+        await self.get_city(city_id)
 
         update_data = payload.model_dump(exclude_unset=True)
         if 'name' in update_data:
@@ -60,7 +59,7 @@ class CityService:
         return result.scalars().one()
 
     async def delete_city(self, city_id: UUID) -> None:
-        await self.get_one_city(city_id)
+        await self.get_city(city_id)
         stmt = delete(City).where(City.id == city_id)
         await self._session.execute(stmt)
         await self._session.commit()

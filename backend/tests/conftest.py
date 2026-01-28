@@ -1,79 +1,119 @@
-from httpx import AsyncClient
+import boto3
+from httpx import ASGITransport, AsyncClient
+from moto import mock_aws
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
+from app.core.s3_service import S3Service, get_s3_service
 from app.database.db import Base, get_db_session
 from app.main import app
+from app.settings.env import Settings, get_env_settings
 
 
-@pytest.fixture(scope='session', autouse=True)
-def setup_test_db():
-    """Setup PostgreSQL testcontainer for the test session (synchronous)"""
-    global postgres_container
-
-    postgres_container = PostgresContainer(
+@pytest.fixture(scope='session')
+def db_url():
+    """Setup PostgreSQL testcontainer for the test session."""
+    with PostgresContainer(
         image='postgres:16-alpine',
         username='test',
         password='test',
         dbname='test_db',
-    )
-    postgres_container.start()
+    ) as container:
+        url = container.get_connection_url().replace('postgresql+psycopg2://', 'postgresql+asyncpg://', 1)
 
-    yield
-
-    postgres_container.stop()
+        yield url
 
 
-@pytest_asyncio.fixture(scope='function')
-async def db_session():
-    """Create an async database session for each test"""
-    db_url = postgres_container.get_connection_url()
-    db_url = db_url.replace('postgresql+psycopg2://', 'postgresql+asyncpg://', 1)
-
+@pytest_asyncio.fixture
+async def db_engine(db_url):
     engine = create_async_engine(
         db_url,
         echo=False,
         pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=10,
-        connect_args={'timeout': 10, 'server_settings': {'jit': 'off'}},
+        connect_args={'server_settings': {'jit': 'off'}},
     )
+    yield engine
+    await engine.dispose()
 
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
 
-        async_session_maker = async_sessionmaker(
-            bind=engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            autoflush=False,
+@pytest.fixture
+def mock_s3_setup():
+    """Setup moto mock for S3."""
+    with mock_aws():
+        # Use synchronous boto3 to create buckets
+        s3_client = boto3.client(
+            's3',
+            region_name='us-east-1',
+            aws_access_key_id='testing',
+            aws_secret_access_key='testing',
         )
-
-        async with async_session_maker() as session:
-            yield session
-    finally:
-        try:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.drop_all)
-        except Exception:
-            pass
-        finally:
-            await engine.dispose()
+        s3_client.create_bucket(Bucket='photos')
+        s3_client.create_bucket(Bucket='thumbnails')
+        yield
 
 
 @pytest_asyncio.fixture
-async def client(db_session: AsyncSession):
-    """Create async test client with overridden database dependency"""
+async def s3_service(mock_s3_setup):
+    """Create S3 service instance populated with test settings."""
+    test_settings = Settings(
+        AWS_ACCESS_KEY_ID='testing',
+        AWS_SECRET_ACCESS_KEY='testing',
+        AWS_REGION='us-east-1',
+        S3_PHOTOS_BUCKET='photos',
+        S3_THUMBNAILS_BUCKET='thumbnails',
+        S3_PRESIGNED_URL_EXPIRATION=3600,
+    )
 
-    async def override_get_db():
-        yield db_session
+    service = S3Service()
+    service._settings = test_settings
 
-    app.dependency_overrides[get_db_session] = override_get_db
+    # Add synchronous client for tests that need direct S3 access
+    service._s3_client = boto3.client(
+        's3',
+        region_name='us-east-1',
+        aws_access_key_id='testing',
+        aws_secret_access_key='testing',
+    )
 
-    async with AsyncClient(app=app, base_url='http://test') as test_client:
+    return service
+
+
+@pytest_asyncio.fixture(scope='function')
+async def db_session(db_engine):
+    """
+    Creates tables before test and drops them after.
+    Yields a fresh async session.
+    """
+    async with db_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session_maker = async_sessionmaker(
+        bind=db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+    )
+
+    async with async_session_maker() as session:
+        yield session
+
+    async with db_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest_asyncio.fixture
+async def client(db_session: AsyncSession, s3_service: S3Service):
+    """Async client with overrides."""
+
+    app.dependency_overrides[get_db_session] = lambda: db_session
+    app.dependency_overrides[get_s3_service] = lambda: s3_service
+    app.dependency_overrides[get_env_settings] = lambda: s3_service._settings
+
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url='http://test') as test_client:
         yield test_client
 
     app.dependency_overrides.clear()

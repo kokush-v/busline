@@ -9,13 +9,13 @@ router = APIRouter(prefix='/cities', tags=['Cities'])
 
 
 @router.get('', response_model=list[CityRead])
-async def list_cities(service: CityService = Depends()):
-    return await service.get_many_cities()
+async def get_cities(service: CityService = Depends()):
+    return await service.get_cities()
 
 
 @router.get('/{city_id}', response_model=CityRead)
 async def get_city(city_id: UUID, service: CityService = Depends()):
-    return await service.get_one_city(city_id)
+    return await service.get_city(city_id)
 
 
 @router.post(

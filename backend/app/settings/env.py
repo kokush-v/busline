@@ -10,6 +10,14 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = 'INFO'  # standard logging level name
     OBSERVABILITY_LOGS_IN_JSON: bool = False  # emit JSON logs when true
 
+    # AWS S3 Configuration
+    AWS_ACCESS_KEY_ID: str = ''
+    AWS_SECRET_ACCESS_KEY: str = ''
+    AWS_REGION: str = ''
+    S3_PHOTOS_BUCKET: str = 'photos'
+    S3_THUMBNAILS_BUCKET: str = 'thumbnails'
+    S3_PRESIGNED_URL_EXPIRATION: int = 3600  # 1 hour in seconds
+
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
 

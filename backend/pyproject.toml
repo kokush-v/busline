@@ -3,7 +3,7 @@ name = "busline-backend"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0"
 authors = [
     {name = "vitalii", email = "vitalii.lohoida@nixs.com"}
 ]
@@ -14,6 +14,7 @@ dependencies = [
     "alembic>=1.13.1",
     "asyncpg>=0.29.0",
     "structlog>=24.1.0",
+    "aioboto3 (>=15.5.0,<16.0.0)",
 ]
 
 [build-system]
@@ -24,6 +25,7 @@ build-backend = "poetry.core.masonry.api"
 pytest = "^8.1.1"
 pytest-asyncio = "^0.23.6"
 testcontainers = {extras = ["postgres"], version = "^4.3.0"}
+moto = {extras = ["s3", "server"], version = "^5.1.20"}
 ruff = "^0.3.4"
 pre-commit = "^3.7.0"
 
