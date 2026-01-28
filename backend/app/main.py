@@ -1,14 +1,12 @@
 import logging
 
 from fastapi import FastAPI
-
-# Импорты типов ошибок
 from starlette.middleware.cors import CORSMiddleware
 import structlog
 
+from app.core.exeptions import setup_exceptions_handler
 from app.features.bus.route import router as bus_router
 from app.features.city.route import router as city_router
-from app.middlewares.error_middleware import ErrorMiddleware
 from app.middlewares.logging_middleware import LoggingMiddleware
 
 logger = structlog.get_logger()
@@ -30,7 +28,6 @@ def get_application() -> FastAPI:
         allow_headers=['*'],
     )
 
-    application.add_middleware(ErrorMiddleware)
     application.add_middleware(LoggingMiddleware)
 
     application.include_router(bus_router)
@@ -40,6 +37,8 @@ def get_application() -> FastAPI:
 
 
 app = get_application()
+
+setup_exceptions_handler(app)
 
 
 @app.get('/health', tags=['Health'])

@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 import aioboto3
 from botocore.config import Config
 
-from app.core.decorators import ErrorType, handle_errors
 from app.settings.env import get_env_settings
 
 
@@ -26,7 +25,6 @@ class S3Service:
             'config': Config(signature_version='s3v4'),
         }
 
-    @handle_errors(ErrorType.STORAGE)
     async def generate_presigned_upload_url(
         self,
         bucket: str,
@@ -50,7 +48,6 @@ class S3Service:
             )
             return presigned_post
 
-    @handle_errors(ErrorType.STORAGE)
     async def delete_object(self, bucket: str, key: str) -> bool:
         """
         Delete an object from S3 asynchronously.

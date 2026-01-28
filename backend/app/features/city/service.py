@@ -4,7 +4,6 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.decorators import ErrorType, handle_errors
 from app.database.db import get_db_session
 from app.features.city.models import City
 from app.features.city.schemas import CityCreate, CityUpdate
@@ -14,12 +13,10 @@ class CityService:
     def __init__(self, session: AsyncSession = Depends(get_db_session)):
         self._session = session
 
-    @handle_errors(ErrorType.DATABASE)
     async def get_many_cities(self) -> list[City]:
         result = await self._session.execute(select(City))
         return list(result.scalars().all())
 
-    @handle_errors(ErrorType.DATABASE)
     async def get_one_city(self, city_id: UUID) -> City:
         result = await self._session.execute(select(City).where(City.id == city_id))
         city = result.scalars().one_or_none()
@@ -27,7 +24,6 @@ class CityService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='City not found')
         return city
 
-    @handle_errors(ErrorType.DATABASE)
     async def create_city(self, payload: CityCreate) -> City:
         result = await self._session.execute(select(City).filter(City.name == payload.name))
         existing = result.scalar_one_or_none()
@@ -42,7 +38,6 @@ class CityService:
         await self._session.commit()
         return result.scalars().one()
 
-    @handle_errors(ErrorType.DATABASE)
     async def update_city(self, city_id: UUID, payload: CityUpdate) -> City:
         await self.get_one_city(city_id)
 
@@ -63,7 +58,6 @@ class CityService:
         await self._session.commit()
         return result.scalars().one()
 
-    @handle_errors(ErrorType.DATABASE)
     async def delete_city(self, city_id: UUID) -> None:
         await self.get_one_city(city_id)
         stmt = delete(City).where(City.id == city_id)
