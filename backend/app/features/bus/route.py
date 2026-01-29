@@ -21,13 +21,11 @@ admin_only = RoleChecker([UserRole.ADMIN])
 
 @router.get('', response_model=list[BusRead])
 async def get_buses(service: BusService = Depends()):
-    """Get all buses."""
     return await service.get_buses()
 
 
 @router.get('/{bus_id}', response_model=BusRead)
 async def get_bus(bus_id: UUID, service: BusService = Depends()):
-    """Get a specific bus by ID."""
     return await service.get_bus(bus_id)
 
 
@@ -37,7 +35,6 @@ async def get_bus(bus_id: UUID, service: BusService = Depends()):
     status_code=status.HTTP_201_CREATED,
 )
 async def create_bus(payload: BusCreate, service: BusService = Depends()):
-    """Create a new bus."""
     return await service.create_bus(payload)
 
 
@@ -46,7 +43,6 @@ async def create_bus(payload: BusCreate, service: BusService = Depends()):
     response_model=BusRead,
 )
 async def update_bus(bus_id: UUID, payload: BusUpdate, service: BusService = Depends()):
-    """Update a bus."""
     return await service.update_bus(bus_id, payload)
 
 
@@ -55,7 +51,6 @@ async def update_bus(bus_id: UUID, payload: BusUpdate, service: BusService = Dep
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_bus(bus_id: UUID, service: BusService = Depends()):
-    """Delete a bus and its media."""
     await service.delete_bus(bus_id)
 
 
@@ -68,12 +63,11 @@ async def get_image_upload_url(request: PresignedUrlRequest, service: BusService
 
 
 @router.post(
-    '/{bus_id}/image/confirm',
+    '/{bus_id}/image/save',
     response_model=BusRead,
 )
-async def confirm_image_upload(bus_id: UUID, payload: PhotoUploadComplete, service: BusService = Depends()):
-    """Confirm image upload and update bus record."""
-    return await service.confirm_image_upload(bus_id, payload.photo_key)
+async def image_save(bus_id: UUID, payload: PhotoUploadComplete, service: BusService = Depends()):
+    return await service.image_save(bus_id, payload.photo_key)
 
 
 @router.delete(
@@ -81,7 +75,6 @@ async def confirm_image_upload(bus_id: UUID, payload: PhotoUploadComplete, servi
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_image(bus_id: UUID, service: BusService = Depends()):
-    """Delete bus image."""
     await service.delete_image(bus_id)
 
 

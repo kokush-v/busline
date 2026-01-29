@@ -18,13 +18,11 @@ class TripService:
         self._session = session
         self._stop_service = stop_service
 
-    async def get_many_trips(self) -> list[Trip]:
-        """Get all trips."""
+    async def get_trips(self) -> list[Trip]:
         result = await self._session.execute(select(Trip))
         return list(result.scalars().all())
 
-    async def get_one_trip(self, trip_id: UUID) -> Trip:
-        """Get a specific trip by ID."""
+    async def get_trip(self, trip_id: UUID) -> Trip:
         result = await self._session.execute(select(Trip).where(Trip.id == trip_id))
         trip = result.scalars().one()
         return trip
@@ -47,8 +45,7 @@ class TripService:
         return trip
 
     async def update_trip(self, trip_id: UUID, payload: TripUpdate) -> Trip:
-        """Update a trip."""
-        trip = await self.get_one_trip(trip_id)
+        trip = await self.get_trip(trip_id)
 
         update_data = {}
 
@@ -66,7 +63,6 @@ class TripService:
         return trip
 
     async def delete_trip(self, trip_id: UUID) -> None:
-        """Delete a trip."""
-        trip = await self.get_one_trip(trip_id)
+        trip = await self.get_trip(trip_id)
         await self._session.delete(trip)
         await self._session.commit()

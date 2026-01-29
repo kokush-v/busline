@@ -31,18 +31,15 @@ class BusService:
         self._s3_service = s3_service
 
     async def get_buses(self) -> list[Bus]:
-        """Get all buses."""
         result = await self._session.execute(select(Bus))
         return list(result.scalars().all())
 
     async def get_bus(self, bus_id: UUID) -> Bus:
-        """Get a specific bus by ID."""
         result = await self._session.execute(select(Bus).where(Bus.id == bus_id))
         bus = result.scalars().one()
         return bus
 
     async def create_bus(self, payload: BusCreate) -> Bus:
-        """Create a new bus."""
         result = await self._session.execute(select(Bus).filter(Bus.number_plate == payload.number_plate))
         result.scalar_one()
 
@@ -52,7 +49,6 @@ class BusService:
         return result.scalars().one()
 
     async def update_bus(self, bus_id: UUID, payload: BusUpdate) -> Bus:
-        """Update a bus."""
         await self.get_bus(bus_id)
 
         update_data = payload.model_dump(exclude_unset=True)
@@ -88,7 +84,6 @@ class BusService:
         await self._session.commit()
 
     async def generate_presigned_upload_url(self, request: PresignedUrlRequest) -> PresignedUrlResponse:
-        """Generate a presigned URL for uploading a photo to S3."""
         presigned_post = await self._s3_service.generate_presigned_upload_url(
             bucket=self._settings.S3_PHOTOS_BUCKET,
             key=request.filename,
@@ -103,7 +98,6 @@ class BusService:
         )
 
     async def update_media_urls(self, bus_id: UUID, photo_key: str) -> Bus:
-        """Update bus media URLs after successful upload."""
         bus = await self.get_bus(bus_id)
 
         await self._delete_old_media(bus)
@@ -122,8 +116,7 @@ class BusService:
         await self._session.commit()
         return result.scalars().one()
 
-    async def confirm_image_upload(self, bus_id: UUID, photo_key: str) -> Bus:
-        """Confirm image upload/update and update bus record with photo URL."""
+    async def image_save(self, bus_id: UUID, photo_key: str) -> Bus:
         return await self.update_media_urls(bus_id, photo_key)
 
     async def delete_image(self, bus_id: UUID) -> None:

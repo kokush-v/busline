@@ -16,8 +16,7 @@ class StopService:
     def __init__(self, session: AsyncSession = Depends(get_db_session)):
         self._session = session
 
-    async def get_many_stops(self, search: str | None = None) -> list[Stop]:
-        """Get all stops with optional search by city or stop name."""
+    async def get_stops(self, search: str | None = None) -> list[Stop]:
         query = select(Stop).join(City, Stop.city_id == City.id)
 
         if search:
@@ -27,14 +26,12 @@ class StopService:
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
-    async def get_one_stop(self, stop_id: UUID) -> Stop:
-        """Get a specific stop by ID."""
+    async def get_stop(self, stop_id: UUID) -> Stop:
         result = await self._session.execute(select(Stop).where(Stop.id == stop_id))
         stop = result.scalars().one()
         return stop
 
     async def create_stop(self, payload: StopCreate) -> Stop:
-        """Create a new stop."""
         city_result = await self._session.execute(select(City).where(City.id == payload.city_id))
         city_result.scalars().one()
 
@@ -44,8 +41,7 @@ class StopService:
         return result.scalars().one()
 
     async def update_stop(self, stop_id: UUID, payload: StopUpdate) -> Stop:
-        """Update a stop."""
-        await self.get_one_stop(stop_id)
+        await self.get_stop(stop_id)
 
         if payload.city_id is not None:
             city_result = await self._session.execute(select(City).where(City.id == payload.city_id))
@@ -58,11 +54,10 @@ class StopService:
             await self._session.commit()
             return result.scalars().one()
 
-        return await self.get_one_stop(stop_id)
+        return await self.get_stop(stop_id)
 
     async def delete_stop(self, stop_id: UUID) -> None:
-        """Delete a stop."""
-        await self.get_one_stop(stop_id)
+        await self.get_stop(stop_id)
         stmt = delete(Stop).where(Stop.id == stop_id)
         await self._session.execute(stmt)
         await self._session.commit()

@@ -10,13 +10,11 @@ router = APIRouter(prefix='/cities', tags=['Cities'])
 
 @router.get('', response_model=list[CityRead])
 async def get_cities(service: CityService = Depends()):
-    """Get all cities."""
     return await service.get_cities()
 
 
 @router.get('/{city_id}', response_model=CityRead)
 async def get_city(city_id: UUID, service: CityService = Depends()):
-    """Get a specific city by ID."""
     return await service.get_city(city_id)
 
 
@@ -26,7 +24,6 @@ async def get_city(city_id: UUID, service: CityService = Depends()):
     status_code=status.HTTP_201_CREATED,
 )
 async def create_city(payload: CityCreate, service: CityService = Depends()):
-    """Create a new city."""
     return await service.create_city(payload)
 
 
@@ -35,7 +32,6 @@ async def create_city(payload: CityCreate, service: CityService = Depends()):
     response_model=CityRead,
 )
 async def update_city(city_id: UUID, payload: CityUpdate, service: CityService = Depends()):
-    """Update a city."""
     return await service.update_city(city_id, payload)
 
 
@@ -44,5 +40,4 @@ async def update_city(city_id: UUID, payload: CityUpdate, service: CityService =
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_city(city_id: UUID, service: CityService = Depends()):
-    """Delete a city."""
     await service.delete_city(city_id)
