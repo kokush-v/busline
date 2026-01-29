@@ -1,14 +1,20 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 import uuid
 
 from sqlalchemy import DateTime, Float, String, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.db import Base
 
+if TYPE_CHECKING:
+    from app.features.stop.models import Stop
+
 
 class City(Base):
+    """Represents a city with geographic coordinates."""
+
     __tablename__ = 'cities'
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -26,3 +32,5 @@ class City(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    stops: Mapped[list['Stop']] = relationship('Stop', back_populates='city')

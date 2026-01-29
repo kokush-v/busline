@@ -3,11 +3,22 @@ from enum import Enum
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from sqlalchemy.exc import SQLAlchemyError
 
 
 class ErrorCode(Enum):
     DATABASE = 'database'
     STORAGE = 'storage'
+
+
+class ErrorSchema(BaseModel):
+    """Schema for errors in the response."""
+
+    message: str
+    code: str | None = None
+    details: dict | None = None
+    timestamp: str
 
 
 class ServerException(Exception):
@@ -36,12 +47,26 @@ def setup_exceptions_handler(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status,
             content={
-                'error': {
-                    'message': exc.message,
-                    'code': exc.code.value if exc.code else None,
-                    'details': exc.details,
-                    'timestamp': exc.timestamp.isoformat(),
-                }
+                'error': ErrorSchema(
+                    message=exc.message,
+                    code=exc.code.value if exc.code else None,
+                    details=exc.details,
+                    timestamp=exc.timestamp.isoformat(),
+                ).model_dump()
+            },
+        )
+
+    @app.exception_handler(SQLAlchemyError)
+    async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
+        return JSONResponse(
+            status_code=500,
+            content={
+                'error': ErrorSchema(
+                    message='Database operation failed',
+                    code=ErrorCode.DATABASE.value,
+                    details={'error_type': type(exc).__name__},
+                    timestamp=datetime.now(UTC).isoformat(),
+                ).model_dump()
             },
         )
 
@@ -50,9 +75,11 @@ def setup_exceptions_handler(app: FastAPI) -> None:
         return JSONResponse(
             status_code=500,
             content={
-                'error': {
-                    'message': 'An unexpected error occurred',
-                    'code': type(exc).__name__,
-                }
+                'error': ErrorSchema(
+                    message='An unexpected error occurred',
+                    code=type(exc).__name__,
+                    details=None,
+                    timestamp=datetime.now(UTC).isoformat(),
+                ).model_dump()
             },
         )

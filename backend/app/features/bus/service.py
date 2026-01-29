@@ -19,6 +19,8 @@ from app.settings.env import get_env_settings
 
 
 class BusService:
+    """Service for managing bus operations and media uploads."""
+
     def __init__(
         self,
         session: AsyncSession = Depends(get_db_session),
@@ -34,19 +36,12 @@ class BusService:
 
     async def get_bus(self, bus_id: UUID) -> Bus:
         result = await self._session.execute(select(Bus).where(Bus.id == bus_id))
-        bus = result.scalars().one_or_none()
-        if bus is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Bus not found')
+        bus = result.scalars().one()
         return bus
 
     async def create_bus(self, payload: BusCreate) -> Bus:
         result = await self._session.execute(select(Bus).filter(Bus.number_plate == payload.number_plate))
-        existing = result.scalar_one_or_none()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Bus with this number plate already exists',
-            )
+        result.scalar_one()
 
         stmt = insert(Bus).values(**payload.model_dump()).returning(Bus)
         result = await self._session.execute(stmt)
@@ -61,12 +56,7 @@ class BusService:
             result = await self._session.execute(
                 select(Bus).filter(Bus.number_plate == update_data['number_plate'], Bus.id != bus_id)
             )
-            conflict = result.scalar_one_or_none()
-            if conflict:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail='Bus with this number plate already exists',
-                )
+            result.scalar_one()
 
         stmt = update(Bus).where(Bus.id == bus_id).values(**update_data).returning(Bus)
         result = await self._session.execute(stmt)
@@ -74,6 +64,7 @@ class BusService:
         return result.scalars().one()
 
     async def delete_bus(self, bus_id: UUID) -> None:
+        """Delete a bus and its media."""
         bus = await self.get_bus(bus_id)
 
         if bus.photo_url:
@@ -93,7 +84,6 @@ class BusService:
         await self._session.commit()
 
     async def generate_presigned_upload_url(self, request: PresignedUrlRequest) -> PresignedUrlResponse:
-        """Generate a presigned URL for uploading a photo to S3."""
         presigned_post = await self._s3_service.generate_presigned_upload_url(
             bucket=self._settings.S3_PHOTOS_BUCKET,
             key=request.filename,
@@ -126,8 +116,7 @@ class BusService:
         await self._session.commit()
         return result.scalars().one()
 
-    async def confirm_image_upload(self, bus_id: UUID, photo_key: str) -> Bus:
-        """Confirm image upload/update and update bus record with photo URL."""
+    async def image_save(self, bus_id: UUID, photo_key: str) -> Bus:
         return await self.update_media_urls(bus_id, photo_key)
 
     async def delete_image(self, bus_id: UUID) -> None:

@@ -7,6 +7,8 @@ import structlog
 from app.core.exeptions import setup_exceptions_handler
 from app.features.bus.route import router as bus_router
 from app.features.city.route import router as city_router
+from app.features.stop.route import router as stop_router
+from app.features.trip.route import router as trip_router
 from app.middlewares.logging_middleware import LoggingMiddleware
 
 logger = structlog.get_logger()
@@ -32,6 +34,8 @@ def get_application() -> FastAPI:
 
     application.include_router(bus_router)
     application.include_router(city_router)
+    application.include_router(trip_router)
+    application.include_router(stop_router)
 
     return application
 

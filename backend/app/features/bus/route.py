@@ -63,11 +63,11 @@ async def get_image_upload_url(request: PresignedUrlRequest, service: BusService
 
 
 @router.post(
-    '/{bus_id}/image/confirm',
+    '/{bus_id}/image/save',
     response_model=BusRead,
 )
-async def confirm_image_upload(bus_id: UUID, payload: PhotoUploadComplete, service: BusService = Depends()):
-    return await service.confirm_image_upload(bus_id, payload.photo_key)
+async def image_save(bus_id: UUID, payload: PhotoUploadComplete, service: BusService = Depends()):
+    return await service.image_save(bus_id, payload.photo_key)
 
 
 @router.delete(
