@@ -16,7 +16,11 @@ class Settings(BaseSettings):
     AWS_REGION: str = ''
     S3_PHOTOS_BUCKET: str = 'photos'
     S3_THUMBNAILS_BUCKET: str = 'thumbnails'
+    S3_TICKETS_BUCKET: str = 'tickets'
     S3_PRESIGNED_URL_EXPIRATION: int = 3600  # 1 hour in seconds
+
+    # Lambda
+    TICKET_PDF_LAMBDA_NAME: str = 'ticket-pdf-generator'
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 

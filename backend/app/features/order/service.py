@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -5,21 +6,26 @@ from fastapi import Depends
 from sqlalchemy import and_, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.statuses import OrderStatus, SeatStatus
 from app.core.exeptions import ServerException
 from app.database.db import get_db_session
+from app.features.order.enums import OrderStatus
 from app.features.order.models import Order
 from app.features.order.schemas import OrderCreate
+from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.ticket.models import Ticket
+from app.features.ticket.service import TicketService
 from app.utils.decorators import transactional
+
+logger = logging.getLogger(__name__)
 
 
 class OrderService:
     """Service for managing orders and reservations."""
 
-    def __init__(self, session: AsyncSession = Depends(get_db_session)):
+    def __init__(self, session: AsyncSession = Depends(get_db_session), ticket_service: TicketService = Depends()):
         self._session = session
+        self._ticket_service = ticket_service
 
     async def get_order(self, order_id: UUID) -> Order:
         """Get order details by ID."""
@@ -59,6 +65,24 @@ class OrderService:
         update_seats_stmt = update(Seat).where(Seat.id.in_(seat_ids_subquery)).values(status=SeatStatus.SOLD)
 
         await self._session.execute(update_seats_stmt)
+
+        # Trigger PDF generation for all tickets in the order
+        tickets = order.tickets
+        for ticket in tickets:
+            try:
+                from app.features.ticket.schemas import CreatePdfRequest
+
+                await self._ticket_service.trigger_pdf_generation(
+                    ticket_id=ticket.id, body=CreatePdfRequest(force=False)
+                )
+            except Exception as e:
+                # Log the error but continue processing other tickets
+                # The ticket PDF status will be updated accordingly
+                logger.error(
+                    f'Failed to trigger PDF generation for ticket {ticket.id}: {str(e)}',
+                    exc_info=True,
+                    extra={'ticket_id': str(ticket.id), 'order_id': str(order.id)},
+                )
 
         return order
 

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.common.schemas import EntityModel
+from app.features.ticket.enums import PdfStatus
 
 
 class TicketBase(BaseModel):
@@ -31,14 +32,22 @@ class TicketRead(EntityModel):
     start_stop_id: UUID
     finish_stop_id: UUID
     price: Decimal
-    pdf_url: str | None = None
+    pdf_status: PdfStatus = PdfStatus.PENDING
 
 
 class TicketUpdate(BaseModel):
     passenger_name: str | None = Field(None, min_length=1, max_length=100)
     passenger_email: str | None = Field(None, max_length=100)
     passenger_age: int | None = Field(None, ge=0, le=150)
-    pdf_url: str | None = None
+
+
+class CreatePdfRequest(BaseModel):
+    force: bool = False
+
+
+class PdfStatusResponse(BaseModel):
+    ticket_id: UUID
+    status: PdfStatus
 
 
 class ReserveTicketRequest(BaseModel):
@@ -50,4 +59,3 @@ class ReserveTicketRequest(BaseModel):
     passenger_age: int | None = Field(None, ge=0, le=150)
     start_stop_id: UUID
     finish_stop_id: UUID
-    price: Decimal = Field(..., decimal_places=2, ge=0)

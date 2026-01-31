@@ -56,4 +56,4 @@ async def delete_trip(trip_id: UUID, service: TripService = Depends()):
 @router.get('/{trip_id}/seats', response_model=list[SeatRead])
 async def get_trip_seats(trip_id: UUID, service: TripService = Depends()):
     """Get all seats for a specific trip."""
-    return await service.get_seats_for_trip(trip_id)
+    return await service.get_seats(trip_id)

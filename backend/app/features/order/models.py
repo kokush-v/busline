@@ -7,8 +7,8 @@ from sqlalchemy import DateTime, Enum, Numeric, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.common.statuses import OrderStatus
 from app.database.db import Base
+from app.features.order.enums import OrderStatus
 
 if TYPE_CHECKING:
     from app.features.ticket.models import Ticket

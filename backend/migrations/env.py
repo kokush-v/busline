@@ -1,10 +1,10 @@
 from logging.config import fileConfig
-import os
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.database import Base
+from app.settings.env import get_env_settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -21,12 +21,14 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    """Get database URL from environment or alembic config."""
-    database_url = os.getenv('DATABASE_URL', config.get_main_option('sqlalchemy.url'))
+    settings = get_env_settings()
 
-    # Convert async URL to sync for alembic (using psycopg3)
-    if database_url and 'asyncpg' in database_url:
-        database_url = database_url.replace('postgresql+asyncpg://', 'postgresql+psycopg://', 1)
+    """Get database URL from environment or alembic config."""
+    database_url = settings.DATABASE_URL
+
+    # Convert URL to use psycopg3 sync driver for alembic
+    if database_url and database_url.startswith('postgresql://'):
+        database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
 
     return database_url
 

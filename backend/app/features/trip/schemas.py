@@ -9,6 +9,7 @@ from app.features.trip_stop.schemas import TripStopCreate, TripStopRead
 
 class TripBase(BaseModel):
     bus_id: UUID
+    price_per_seat: float
 
 
 class TripCreate(TripBase):
@@ -24,6 +25,7 @@ class TripCreate(TripBase):
         'json_schema_extra': {
             'example': {
                 'bus_id': '550e8400-e29b-41d4-a716-446655440000',
+                'price_per_seat': 150.00,
                 'stops': [
                     {
                         'stop_id': '550e8400-e29b-41d4-a716-446655440001',
@@ -44,6 +46,7 @@ class TripCreate(TripBase):
 
 
 class TripUpdate(BaseModel):
+    price_per_seat: float | None = None
     stops: list[TripStopCreate] | None = None
 
     @model_validator(mode='after')
@@ -72,6 +75,7 @@ class TripUpdate(BaseModel):
 
 class TripRead(EntityModel):
     bus_id: UUID
+    price_per_seat: float
     seats_left: int
     trip_stops: list[TripStopRead]
 
@@ -81,6 +85,7 @@ class TripReadPublic(BaseModel):
 
     id: UUID
     bus_id: UUID
+    price_per_seat: float
     seats_left: int
     trip_stops: list[TripStopRead]
     created_at: datetime

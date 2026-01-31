@@ -5,7 +5,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.common.schemas import EntityModel
-from app.common.statuses import OrderStatus, SeatStatus
+from app.features.order.enums import OrderStatus
+from app.features.seat.enums import SeatStatus
 from app.features.ticket.schemas import ReserveTicketRequest, TicketRead
 
 

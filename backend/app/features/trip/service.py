@@ -1,12 +1,13 @@
 from uuid import UUID
 
 from fastapi import Depends
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.db import get_db_session
 from app.features.bus.models import Bus
 from app.features.bus.service import BusService
+from app.features.seat.models import Seat
 from app.features.seat.service import SeatService
 from app.features.stop.service import StopService
 from app.features.trip.models import Trip
@@ -49,6 +50,7 @@ class TripService:
             insert(Trip)
             .values(
                 bus_id=payload.bus_id,
+                price_per_seat=payload.price_per_seat,
                 seats_left=bus.seats_quantity,
             )
             .returning(Trip)
@@ -70,6 +72,10 @@ class TripService:
         """Update trip and its stops. Bus change is restricted."""
         trip = await self.get_trip(trip_id)
 
+        update_data = payload.model_dump(exclude_none=True, exclude={'stops'})
+        if update_data:
+            await self._session.execute(update(Trip).where(Trip.id == trip_id).values(**update_data))
+
         if payload.stops is not None:
             await self._session.execute(delete(TripStop).where(TripStop.trip_id == trip_id))
 
@@ -79,6 +85,11 @@ class TripService:
 
         await self._session.refresh(trip)
         return trip
+
+    async def get_seats(self, trip_id: UUID) -> list[Seat]:
+        await self.get_trip(trip_id)
+        result = await self._session.execute(select(Seat).where(Seat.trip_id == trip_id))
+        return list(result.scalars().all())
 
     @transactional
     async def delete_trip(self, trip_id: UUID) -> None:

@@ -6,9 +6,10 @@ from fastapi import Depends
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.statuses import SeatStatus
+from app.features.seat.enums import SeatStatus
 from app.core.exeptions import ServerException
 from app.database.db import get_db_session
+from app.features.order.enums import OrderStatus
 from app.features.order.schemas import OrderCreate
 from app.features.order.service import OrderService
 from app.features.seat.models import Seat
@@ -65,8 +66,8 @@ class SeatService:
         trip_id = payload.trip_id
         tickets_ids = payload.tickets
 
-        trip_result = await self._session.execute(select(Trip.id).where(Trip.id == trip_id))
-        trip_result.one()
+        trip_result = await self._session.execute(select(Trip).where(Trip.id == trip_id))
+        trip = trip_result.scalar_one()
 
         for ticket in tickets_ids:
             await self._trip_stop_service.validate_stops_exist_in_trip(
@@ -90,11 +91,12 @@ class SeatService:
             if seat.status != SeatStatus.FREE:
                 raise ServerException(message=f'Seat {seat.position_index} is not available', status=409)
 
-        total_price = sum(Decimal(str(t.price)) for t in tickets_ids)
+        price_per_seat = Decimal(str(trip.price_per_seat))
+        total_price = price_per_seat * len(tickets_ids)
         expires_at = datetime.now(UTC) + timedelta(minutes=30)
         order_data = OrderCreate(
             total_price=total_price,
-            status='pending',
+            status=OrderStatus.PENDING,
             expires_at=expires_at,
         )
 
@@ -107,7 +109,7 @@ class SeatService:
                 order_id=order.id,
                 trip_id=trip_id,
                 seat_id=t.seat_id,
-                price=t.price,
+                price=price_per_seat,
                 passenger_name=t.passenger_name,
                 passenger_email=t.passenger_email,
                 passenger_age=t.passenger_age,
