@@ -9,12 +9,13 @@ authors = [
 ]
 
 dependencies = [
-    "fastapi[all]>=0.110.0",
-    "sqlalchemy[asyncio]>=2.0.29",
     "alembic>=1.13.1",
     "asyncpg>=0.29.0",
+    "fastapi[all]>=0.110.0",
+    "psycopg[binary]>=3.2.9",
+    "sqlalchemy[asyncio]>=2.0.29",
     "structlog>=24.1.0",
-    "aioboto3 (>=15.5.0,<16.0.0)",
+    "aioboto3>=15.5.0,<16.0.0",
 ]
 
 [build-system]
@@ -22,13 +23,19 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.1.1"
-pytest-asyncio = "^0.23.6"
-testcontainers = {extras = ["postgres"], version = "^4.3.0"}
-moto = {extras = ["s3", "server"], version = "^5.1.20"}
-ruff = "^0.3.4"
-pre-commit = "^3.7.0"
+httpx = ">=0.28.1"
+moto = {extras = ["s3", "server"], version = ">=5.1.20"}
+polyfactory = ">=2.21.0"
+pre-commit = ">=3.7.0"
+pytest = ">=8.4.1"
+pytest-asyncio = ">=1.0.0"
+pytest-cov = ">=6.2.1"
+ruff = ">=0.12.1"
+testcontainers = {extras = ["postgres"], version = ">=4.10.0"}
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.ruff]
 line-length = 120

@@ -1,0 +1,1 @@
+"""Seat feature module."""

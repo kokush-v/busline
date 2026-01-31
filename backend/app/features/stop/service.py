@@ -6,15 +6,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.db import get_db_session
 from app.features.city.models import City
+from app.features.city.service import CityService
 from app.features.stop.models import Stop
 from app.features.stop.schemas import StopCreate, StopUpdate
+from app.utils.decorators import transactional
 
 
 class StopService:
     """Service for managing stop operations."""
 
-    def __init__(self, session: AsyncSession = Depends(get_db_session)):
+    def __init__(self, session: AsyncSession = Depends(get_db_session), city_service: CityService = Depends()):
         self._session = session
+        self._city_service = city_service
 
     async def get_stops(self, search: str | None = None) -> list[Stop]:
         query = select(Stop).join(City, Stop.city_id == City.id)
@@ -31,15 +34,16 @@ class StopService:
         stop = result.scalars().one()
         return stop
 
+    @transactional
     async def create_stop(self, payload: StopCreate) -> Stop:
         city_result = await self._session.execute(select(City).where(City.id == payload.city_id))
         city_result.scalars().one()
 
         stmt = insert(Stop).values(**payload.model_dump()).returning(Stop)
         result = await self._session.execute(stmt)
-        await self._session.commit()
         return result.scalars().one()
 
+    @transactional
     async def update_stop(self, stop_id: UUID, payload: StopUpdate) -> Stop:
         await self.get_stop(stop_id)
 
@@ -51,13 +55,12 @@ class StopService:
         if update_data:
             stmt = update(Stop).where(Stop.id == stop_id).values(**update_data).returning(Stop)
             result = await self._session.execute(stmt)
-            await self._session.commit()
             return result.scalars().one()
 
         return await self.get_stop(stop_id)
 
+    @transactional
     async def delete_stop(self, stop_id: UUID) -> None:
         await self.get_stop(stop_id)
         stmt = delete(Stop).where(Stop.id == stop_id)
         await self._session.execute(stmt)
-        await self._session.commit()

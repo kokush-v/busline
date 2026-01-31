@@ -4,9 +4,11 @@ from fastapi import Depends
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exeptions import ServerException
 from app.database.db import get_db_session
 from app.features.city.models import City
 from app.features.city.schemas import CityCreate, CityUpdate
+from app.utils.decorators import transactional
 
 
 class CityService:
@@ -24,15 +26,17 @@ class CityService:
         city = result.scalars().one()
         return city
 
+    @transactional
     async def create_city(self, payload: CityCreate) -> City:
         result = await self._session.execute(select(City).filter(City.name == payload.name))
-        result.scalar_one()
+        if result.scalar_one_or_none():
+            raise ServerException(message='City with this name already exists', status=400)
 
         stmt = insert(City).values(**payload.model_dump()).returning(City)
         result = await self._session.execute(stmt)
-        await self._session.commit()
         return result.scalars().one()
 
+    @transactional
     async def update_city(self, city_id: UUID, payload: CityUpdate) -> City:
         await self.get_city(city_id)
 
@@ -41,15 +45,18 @@ class CityService:
             result = await self._session.execute(
                 select(City).filter(City.name == update_data['name'], City.id != city_id)
             )
-            result.scalar_one()
+            if result.scalar_one_or_none():
+                raise ServerException(message='City with this name already exists', status=400)
 
-        stmt = update(City).where(City.id == city_id).values(**update_data).returning(City)
-        result = await self._session.execute(stmt)
-        await self._session.commit()
-        return result.scalars().one()
+        if update_data:
+            stmt = update(City).where(City.id == city_id).values(**update_data).returning(City)
+            result = await self._session.execute(stmt)
+            return result.scalars().one()
 
+        return await self.get_city(city_id)
+
+    @transactional
     async def delete_city(self, city_id: UUID) -> None:
         await self.get_city(city_id)
         stmt = delete(City).where(City.id == city_id)
         await self._session.execute(stmt)
-        await self._session.commit()

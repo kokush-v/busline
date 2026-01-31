@@ -16,6 +16,7 @@ from app.database.db import Base
 
 if TYPE_CHECKING:
     from app.features.bus.models import Bus
+    from app.features.seat.models import Seat
     from app.features.trip_stop.models import TripStop
 
 
@@ -48,6 +49,13 @@ class Trip(Base):
 
     trip_stops: Mapped[list['TripStop']] = relationship(
         'TripStop',
+        back_populates='trip',
+        cascade='all, delete-orphan',
+        lazy='selectin',
+    )
+
+    seats: Mapped[list['Seat']] = relationship(
+        'Seat',
         back_populates='trip',
         cascade='all, delete-orphan',
         lazy='selectin',

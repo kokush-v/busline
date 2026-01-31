@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, UploadFile, status
+from fastapi import Depends, UploadFile
 import httpx
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exeptions import ServerException
 from app.core.s3_service import S3Service, get_s3_service
 from app.database.db import get_db_session
 from app.features.bus.models import Bus
@@ -41,7 +42,8 @@ class BusService:
 
     async def create_bus(self, payload: BusCreate) -> Bus:
         result = await self._session.execute(select(Bus).filter(Bus.number_plate == payload.number_plate))
-        result.scalar_one()
+        if result.scalar_one_or_none():
+            raise ServerException(message='Bus with this number plate already exists', status=400)
 
         stmt = insert(Bus).values(**payload.model_dump()).returning(Bus)
         result = await self._session.execute(stmt)
@@ -56,7 +58,8 @@ class BusService:
             result = await self._session.execute(
                 select(Bus).filter(Bus.number_plate == update_data['number_plate'], Bus.id != bus_id)
             )
-            result.scalar_one()
+            if result.scalar_one_or_none():
+                raise ServerException(message='Bus with this number plate already exists', status=400)
 
         stmt = update(Bus).where(Bus.id == bus_id).values(**update_data).returning(Bus)
         result = await self._session.execute(stmt)
@@ -173,7 +176,4 @@ class BusService:
                         'response': response.text,
                     }
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f'Failed to upload file: {str(e)}',
-            ) from e
+            raise ServerException(message=f'Failed to upload file: {str(e)}') from e
