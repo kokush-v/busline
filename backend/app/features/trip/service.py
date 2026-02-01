@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import Depends
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import and_, asc, delete, desc, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.db import get_db_session
@@ -11,7 +11,7 @@ from app.features.seat.models import Seat
 from app.features.seat.service import SeatService
 from app.features.stop.service import StopService
 from app.features.trip.models import Trip
-from app.features.trip.schemas import TripCreate, TripUpdate
+from app.features.trip.schemas import SortOrder, TripCreate, TripQueryParams, TripSortBy, TripUpdate
 from app.features.trip_stop.models import TripStop
 from app.utils.decorators import transactional
 
@@ -31,9 +31,83 @@ class TripService:
         self._stop_service = stop_service
         self._seat_service = seat_service
 
-    async def get_trips(self) -> list[Trip]:
-        result = await self._session.execute(select(Trip))
-        return list(result.scalars().all())
+    async def get_trips(self, params: TripQueryParams) -> tuple[list[Trip], int]:
+        """Get trips with filtering, sorting, and pagination."""
+        query = select(Trip).distinct()
+
+        if params.from_stop_id:
+            from_stop_subq = (
+                select(TripStop.trip_id)
+                .where(
+                    and_(
+                        TripStop.stop_id == params.from_stop_id,
+                        TripStop.position_index == 1,
+                    )
+                )
+                .subquery()
+            )
+            query = query.where(Trip.id.in_(select(from_stop_subq)))
+
+            if params.departure_date_from or params.departure_date_to:
+                date_conditions = []
+                if params.departure_date_from:
+                    date_conditions.append(TripStop.departure_time >= params.departure_date_from)
+                if params.departure_date_to:
+                    date_conditions.append(TripStop.departure_time <= params.departure_date_to)
+
+                query = query.join(TripStop, Trip.id == TripStop.trip_id).where(
+                    and_(
+                        TripStop.stop_id == params.from_stop_id,
+                        TripStop.position_index == 1,
+                        *date_conditions,
+                    )
+                )
+
+        if params.to_stop_id:
+            if params.from_stop_id:
+                to_stop_subq = select(TripStop.trip_id).where(TripStop.stop_id == params.to_stop_id).subquery()
+                query = query.where(Trip.id.in_(select(to_stop_subq)))
+            else:
+                to_stop_subq = select(TripStop.trip_id).where(TripStop.stop_id == params.to_stop_id).subquery()
+                query = query.where(Trip.id.in_(select(to_stop_subq)))
+
+        if params.min_price is not None:
+            query = query.where(Trip.price_per_seat >= params.min_price)
+        if params.max_price is not None:
+            query = query.where(Trip.price_per_seat <= params.max_price)
+
+        if params.available_seats_min is not None:
+            query = query.where(Trip.seats_left >= params.available_seats_min)
+
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self._session.execute(count_query)
+        total = total_result.scalar_one()
+
+        match params.sort_by:
+            case TripSortBy.DEPARTURE_TIME:
+                query = query.join(TripStop, Trip.id == TripStop.trip_id).where(TripStop.position_index == 1)
+                sort_column = TripStop.departure_time
+            case TripSortBy.PRICE:
+                sort_column = Trip.price_per_seat
+            case TripSortBy.SEATS_LEFT:
+                sort_column = Trip.seats_left
+            case TripSortBy.CREATED_AT:
+                sort_column = Trip.created_at
+            case _:
+                sort_column = Trip.created_at
+
+        match params.sort_order:
+            case SortOrder.DESC:
+                query = query.order_by(desc(sort_column))
+            case _:
+                query = query.order_by(asc(sort_column))
+
+        query = query.limit(params.limit).offset(params.offset)
+
+        result = await self._session.execute(query)
+        trips = list(result.scalars().all())
+
+        return trips, total
 
     async def get_trip(self, trip_id: UUID) -> Trip:
         result = await self._session.execute(select(Trip).where(Trip.id == trip_id))

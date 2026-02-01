@@ -6,12 +6,12 @@ from fastapi import Depends
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.seat.enums import SeatStatus
 from app.core.exeptions import ServerException
 from app.database.db import get_db_session
 from app.features.order.enums import OrderStatus
 from app.features.order.schemas import OrderCreate
 from app.features.order.service import OrderService
+from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.seat.schemas import ReserveSeatRequest, ReserveSeatResponse
 from app.features.ticket.schemas import TicketCreate, TicketRead

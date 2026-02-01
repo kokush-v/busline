@@ -6,8 +6,8 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.features.seat.enums import SeatStatus
 from app.database.db import Base
+from app.features.seat.enums import SeatStatus
 
 if TYPE_CHECKING:
     from app.features.trip.models import Trip

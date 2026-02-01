@@ -1,5 +1,5 @@
-import logging
 from datetime import UTC, datetime
+import logging
 from uuid import UUID
 
 from fastapi import Depends

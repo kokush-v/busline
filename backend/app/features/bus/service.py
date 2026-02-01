@@ -2,20 +2,23 @@ from uuid import UUID
 
 from fastapi import Depends, UploadFile
 import httpx
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import asc, delete, desc, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exeptions import ServerException
 from app.core.s3_service import S3Service, get_s3_service
 from app.database.db import get_db_session
+from app.features.bus.enums import BusSortBy
 from app.features.bus.models import Bus
 from app.features.bus.schemas import (
     BusCreate,
+    BusQueryParams,
     BusUpdate,
     PresignedUrlRequest,
     PresignedUrlResponse,
     TestUploadRequest,
 )
+from app.features.trip.enums import SortOrder
 from app.settings.env import get_env_settings
 
 
@@ -31,9 +34,57 @@ class BusService:
         self._settings = get_env_settings()
         self._s3_service = s3_service
 
-    async def get_buses(self) -> list[Bus]:
-        result = await self._session.execute(select(Bus))
-        return list(result.scalars().all())
+    async def get_buses(self, params: BusQueryParams) -> tuple[list[Bus], int]:
+        """Get buses with filtering, sorting, and pagination."""
+        query = select(Bus)
+
+        if params.search:
+            query = query.where(
+                or_(
+                    Bus.number_plate.ilike(f'%{params.search}%'),
+                    Bus.color.ilike(f'%{params.search}%'),
+                )
+            )
+
+        if params.min_seats is not None:
+            query = query.where(Bus.seats_quantity >= params.min_seats)
+        if params.max_seats is not None:
+            query = query.where(Bus.seats_quantity <= params.max_seats)
+
+        if params.has_photo is not None:
+            if params.has_photo:
+                query = query.where(Bus.photo_url.isnot(None))
+            else:
+                query = query.where(Bus.photo_url.is_(None))
+
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self._session.execute(count_query)
+        total = total_result.scalar_one()
+
+        match params.sort_by:
+            case BusSortBy.NUMBER_PLATE:
+                sort_column = Bus.number_plate
+            case BusSortBy.COLOR:
+                sort_column = Bus.color
+            case BusSortBy.SEATS_QUANTITY:
+                sort_column = Bus.seats_quantity
+            case BusSortBy.CREATED_AT:
+                sort_column = Bus.created_at
+            case _:
+                sort_column = Bus.created_at
+
+        match params.sort_order:
+            case SortOrder.DESC:
+                query = query.order_by(desc(sort_column))
+            case _:
+                query = query.order_by(asc(sort_column))
+
+        query = query.limit(params.limit).offset(params.offset)
+
+        result = await self._session.execute(query)
+        buses = list(result.scalars().all())
+
+        return buses, total
 
     async def get_bus(self, bus_id: UUID) -> Bus:
         result = await self._session.execute(select(Bus).where(Bus.id == bus_id))

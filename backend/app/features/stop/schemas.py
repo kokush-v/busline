@@ -25,3 +25,21 @@ class StopUpdate(BaseModel):
 
 class StopRead(StopBase, EntityModel):
     pass
+
+
+class StopQueryParams(BaseModel):
+    """Query parameters for filtering and paginating stops."""
+
+    search: str | None = Field(None, description='Search stops by city or stop name')
+
+    limit: int = Field(20, ge=1, le=100, description='Number of items per page')
+    offset: int = Field(0, ge=0, description='Number of items to skip')
+
+
+class StopListResponse(BaseModel):
+    """Response model for paginated stops list."""
+
+    items: list[StopRead]
+    total: int
+    limit: int
+    offset: int
