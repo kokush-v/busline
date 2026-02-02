@@ -70,6 +70,12 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+def get_async_session_maker() -> async_sessionmaker[AsyncSession]:
+    """Get async session maker for background tasks."""
+    db_helper = get_database_helper()
+    return db_helper.session_factory
+
+
 def get_alembic_config(database_url: str, script_location: str = 'migrations') -> AlembicConfig:
     """Create alembic config for running migrations programmatically.
 
