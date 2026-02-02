@@ -1,11 +1,6 @@
-from enum import StrEnum
-
 from fastapi import Depends, HTTPException, status
 
-
-class UserRole(StrEnum):
-    ADMIN = 'admin'
-    USER = 'user'
+from app.features.user.enums import UserRole
 
 
 class RoleChecker:

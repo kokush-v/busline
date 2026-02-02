@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.common.schemas import EntityModel, Latitude, Longitude
+from app.common.schemas import EntityModel, Latitude, Longitude, PaginatedResponse, QueryParams
 
 
 class StopBase(BaseModel):
@@ -27,19 +27,13 @@ class StopRead(StopBase, EntityModel):
     pass
 
 
-class StopQueryParams(BaseModel):
+class StopQueryParams(QueryParams):
     """Query parameters for filtering and paginating stops."""
 
-    search: str | None = Field(None, description='Search stops by city or stop name')
-
-    limit: int = Field(20, ge=1, le=100, description='Number of items per page')
-    offset: int = Field(0, ge=0, description='Number of items to skip')
+    pass
 
 
-class StopListResponse(BaseModel):
+class StopListResponse(PaginatedResponse[StopRead]):
     """Response model for paginated stops list."""
 
-    items: list[StopRead]
-    total: int
-    limit: int
-    offset: int
+    pass

@@ -12,6 +12,7 @@ from app.features.seat.route import router as seat_router
 from app.features.stop.route import router as stop_router
 from app.features.ticket.route import router as ticket_router
 from app.features.trip.route import router as trip_router
+from app.features.user.route import router as user_router
 from app.middlewares.logging_middleware import LoggingMiddleware
 
 logger = structlog.get_logger()
@@ -45,6 +46,7 @@ def get_application(include_middlewares: bool = True) -> FastAPI:
     application.include_router(order_router)
     application.include_router(seat_router)
     application.include_router(ticket_router)
+    application.include_router(user_router)
 
     @application.get('/health', tags=['Health'])
     async def health_check():

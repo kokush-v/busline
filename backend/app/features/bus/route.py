@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
-from app.core.roles import RoleChecker, UserRole
+from app.core.roles import RoleChecker
 from app.features.bus.schemas import (
     BusCreate,
     BusListResponse,
@@ -15,6 +15,7 @@ from app.features.bus.schemas import (
     TestUploadRequest,
 )
 from app.features.bus.service import BusService
+from app.features.user.enums import UserRole
 
 router = APIRouter(prefix='/buses', tags=['Buses'])
 

@@ -4,6 +4,7 @@ from fastapi import Depends
 from sqlalchemy import and_, asc, delete, desc, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.enums import SortOrder
 from app.database.db import get_db_session
 from app.features.bus.models import Bus
 from app.features.bus.service import BusService
@@ -11,7 +12,7 @@ from app.features.seat.models import Seat
 from app.features.seat.service import SeatService
 from app.features.stop.service import StopService
 from app.features.trip.models import Trip
-from app.features.trip.schemas import SortOrder, TripCreate, TripQueryParams, TripSortBy, TripUpdate
+from app.features.trip.schemas import TripCreate, TripQueryParams, TripSortBy, TripUpdate
 from app.features.trip_stop.models import TripStop
 from app.utils.decorators import transactional
 

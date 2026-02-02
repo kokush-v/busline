@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.core.roles import RoleChecker, UserRole
+from app.core.roles import RoleChecker
 from app.features.seat.schemas import SeatRead
 from app.features.trip.schemas import (
     TripCreate,
@@ -13,6 +13,7 @@ from app.features.trip.schemas import (
     TripUpdate,
 )
 from app.features.trip.service import TripService
+from app.features.user.enums import UserRole
 
 router = APIRouter(prefix='/trips', tags=['Trips'])
 

@@ -2,9 +2,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.core.roles import RoleChecker, UserRole
+from app.core.roles import RoleChecker
 from app.features.stop.schemas import StopCreate, StopListResponse, StopQueryParams, StopRead, StopUpdate
 from app.features.stop.service import StopService
+from app.features.user.enums import UserRole
 
 router = APIRouter(prefix='/stops', tags=['Stops'])
 
