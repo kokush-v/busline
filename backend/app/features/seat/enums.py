@@ -1,9 +1,7 @@
-import enum
+from enum import StrEnum
 
 
-class SeatStatus(enum.StrEnum):
-    """Represents the status of a seat in a trip."""
-
+class SeatStatus(StrEnum):
     FREE = 'FREE'
     LOCKED = 'LOCKED'
     SOLD = 'SOLD'

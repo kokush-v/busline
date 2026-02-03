@@ -1,9 +1,7 @@
-import enum
+from enum import StrEnum
 
 
-class OrderStatus(enum.StrEnum):
-    """Represents the status of a reservation order."""
-
+class OrderStatus(StrEnum):
     PENDING = 'PENDING'
     PROCESSING = 'PROCESSING'
     PAID = 'PAID'

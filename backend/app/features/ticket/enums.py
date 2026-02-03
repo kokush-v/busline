@@ -1,9 +1,7 @@
-import enum
+from enum import StrEnum
 
 
-class PdfStatus(enum.StrEnum):
-    """Represents the status of a ticket PDF generation."""
-
+class PdfStatus(StrEnum):
     PENDING = 'PENDING'
     GENERATING = 'GENERATING'
     READY = 'READY'

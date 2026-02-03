@@ -31,58 +31,64 @@ class TripService:
         self._stop_service = stop_service
         self._seat_service = seat_service
 
-    async def get_trips(self, params: TripQueryParams) -> tuple[list[Trip], int]:
-        """Get trips with filtering, sorting, and pagination."""
-        query = select(Trip).distinct()
+    def __apply_from_stop_filter(self, query, params: TripQueryParams):
+        """Apply filter for departure stop."""
+        if not params.from_stop_id:
+            return query
 
-        if params.from_stop_id:
-            from_stop_subq = (
-                select(TripStop.trip_id)
-                .where(
-                    and_(
-                        TripStop.stop_id == params.from_stop_id,
-                        TripStop.position_index == 1,
-                    )
+        from_stop_subq = (
+            select(TripStop.trip_id)
+            .where(
+                and_(
+                    TripStop.stop_id == params.from_stop_id,
+                    TripStop.position_index == 1,
                 )
-                .subquery()
             )
-            query = query.where(Trip.id.in_(select(from_stop_subq)))
+            .subquery()
+        )
+        query = query.where(Trip.id.in_(select(from_stop_subq)))
 
-            if params.departure_date_from or params.departure_date_to:
-                date_conditions = []
-                if params.departure_date_from:
-                    date_conditions.append(TripStop.departure_time >= params.departure_date_from)
-                if params.departure_date_to:
-                    date_conditions.append(TripStop.departure_time <= params.departure_date_to)
+        if params.departure_date_from or params.departure_date_to:
+            date_conditions = []
+            if params.departure_date_from:
+                date_conditions.append(TripStop.departure_time >= params.departure_date_from)
+            if params.departure_date_to:
+                date_conditions.append(TripStop.departure_time <= params.departure_date_to)
 
-                query = query.join(TripStop, Trip.id == TripStop.trip_id).where(
-                    and_(
-                        TripStop.stop_id == params.from_stop_id,
-                        TripStop.position_index == 1,
-                        *date_conditions,
-                    )
+            query = query.join(TripStop, Trip.id == TripStop.trip_id).where(
+                and_(
+                    TripStop.stop_id == params.from_stop_id,
+                    TripStop.position_index == 1,
+                    *date_conditions,
                 )
+            )
 
-        if params.to_stop_id:
-            if params.from_stop_id:
-                to_stop_subq = select(TripStop.trip_id).where(TripStop.stop_id == params.to_stop_id).subquery()
-                query = query.where(Trip.id.in_(select(to_stop_subq)))
-            else:
-                to_stop_subq = select(TripStop.trip_id).where(TripStop.stop_id == params.to_stop_id).subquery()
-                query = query.where(Trip.id.in_(select(to_stop_subq)))
+        return query
 
+    def __apply_to_stop_filter(self, query, params: TripQueryParams):
+        """Apply filter for arrival stop."""
+        if not params.to_stop_id:
+            return query
+
+        to_stop_subq = select(TripStop.trip_id).where(TripStop.stop_id == params.to_stop_id).subquery()
+        return query.where(Trip.id.in_(select(to_stop_subq)))
+
+    def __apply_price_filters(self, query, params: TripQueryParams):
+        """Apply price range filters."""
         if params.min_price is not None:
             query = query.where(Trip.price_per_seat >= params.min_price)
         if params.max_price is not None:
             query = query.where(Trip.price_per_seat <= params.max_price)
+        return query
 
+    def __apply_seats_filter(self, query, params: TripQueryParams):
+        """Apply available seats filter."""
         if params.available_seats_min is not None:
             query = query.where(Trip.seats_left >= params.available_seats_min)
+        return query
 
-        count_query = select(func.count()).select_from(query.subquery())
-        total_result = await self._session.execute(count_query)
-        total = total_result.scalar_one()
-
+    def __apply_sorting(self, query, params: TripQueryParams):
+        """Apply sorting based on parameters."""
         match params.sort_by:
             case TripSortBy.DEPARTURE_TIME:
                 query = query.join(TripStop, Trip.id == TripStop.trip_id).where(TripStop.position_index == 1)
@@ -102,7 +108,31 @@ class TripService:
             case _:
                 query = query.order_by(asc(sort_column))
 
-        query = query.limit(params.limit).offset(params.offset)
+        return query
+
+    def __apply_pagination(self, query, params: TripQueryParams):
+        """Apply limit and offset for pagination."""
+        return query.limit(params.limit).offset(params.offset)
+
+    async def __get_total_count(self, query) -> int:
+        """Get total count of records matching the query."""
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self._session.execute(count_query)
+        return total_result.scalar_one()
+
+    async def get_trips(self, params: TripQueryParams) -> tuple[list[Trip], int]:
+        """Get trips with filtering, sorting, and pagination."""
+        query = select(Trip).distinct()
+
+        query = self.__apply_from_stop_filter(query, params)
+        query = self.__apply_to_stop_filter(query, params)
+        query = self.__apply_price_filters(query, params)
+        query = self.__apply_seats_filter(query, params)
+
+        total = await self.__get_total_count(query)
+
+        query = self.__apply_sorting(query, params)
+        query = self.__apply_pagination(query, params)
 
         result = await self._session.execute(query)
         trips = list(result.scalars().all())

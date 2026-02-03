@@ -1,8 +1,6 @@
-import enum
+from enum import StrEnum
 
 
-class CitySortBy(enum.StrEnum):
-    """Sort options for cities."""
-
+class CitySortBy(StrEnum):
     NAME = 'NAME'
     CREATED_AT = 'CREATED_AT'

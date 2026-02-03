@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 import time
 import traceback
@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 from app.settings.env import get_env_settings
 
 
-class ErrorCode(Enum):
+class ErrorCode(StrEnum):
     DATABASE = 'database'
     STORAGE = 'storage'
 
