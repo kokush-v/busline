@@ -34,33 +34,35 @@ class BusService:
         self._settings = get_env_settings()
         self._s3_service = s3_service
 
-    async def get_buses(self, params: BusQueryParams) -> tuple[list[Bus], int]:
-        """Get buses with filtering, sorting, and pagination."""
-        query = select(Bus)
+    def __apply_search_filter(self, query, params: BusQueryParams):
+        if not params.search:
+            return query
 
-        if params.search:
-            query = query.where(
-                or_(
-                    Bus.number_plate.ilike(f'%{params.search}%'),
-                    Bus.color.ilike(f'%{params.search}%'),
-                )
+        return query.where(
+            or_(
+                Bus.number_plate.ilike(f'%{params.search}%'),
+                Bus.color.ilike(f'%{params.search}%'),
             )
+        )
 
+    def __apply_seats_filters(self, query, params: BusQueryParams):
         if params.min_seats is not None:
             query = query.where(Bus.seats_quantity >= params.min_seats)
         if params.max_seats is not None:
             query = query.where(Bus.seats_quantity <= params.max_seats)
+        return query
 
-        if params.has_photo is not None:
-            if params.has_photo:
-                query = query.where(Bus.photo_url.isnot(None))
-            else:
-                query = query.where(Bus.photo_url.is_(None))
+    def __apply_photo_filter(self, query, params: BusQueryParams):
+        if params.has_photo is None:
+            return query
 
-        count_query = select(func.count()).select_from(query.subquery())
-        total_result = await self._session.execute(count_query)
-        total = total_result.scalar_one()
+        if params.has_photo:
+            query = query.where(Bus.photo_url.isnot(None))
+        else:
+            query = query.where(Bus.photo_url.is_(None))
+        return query
 
+    def __apply_sorting(self, query, params: BusQueryParams):
         match params.sort_by:
             case BusSortBy.NUMBER_PLATE:
                 sort_column = Bus.number_plate
@@ -79,7 +81,28 @@ class BusService:
             case _:
                 query = query.order_by(asc(sort_column))
 
-        query = query.limit(params.limit).offset(params.offset)
+        return query
+
+    def __apply_pagination(self, query, params: BusQueryParams):
+        return query.limit(params.limit).offset(params.offset)
+
+    async def __get_total_count(self, query) -> int:
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self._session.execute(count_query)
+        return total_result.scalar_one()
+
+    async def get_buses(self, params: BusQueryParams) -> tuple[list[Bus], int]:
+        """Get buses with filtering, sorting, and pagination."""
+        query = select(Bus)
+
+        query = self.__apply_search_filter(query, params)
+        query = self.__apply_seats_filters(query, params)
+        query = self.__apply_photo_filter(query, params)
+
+        total = await self.__get_total_count(query)
+
+        query = self.__apply_sorting(query, params)
+        query = self.__apply_pagination(query, params)
 
         result = await self._session.execute(query)
         buses = list(result.scalars().all())

@@ -40,14 +40,11 @@ class TicketService:
         return tickets
 
     async def get_ticket(self, ticket_id: UUID) -> Ticket:
-        """Get ticket details by ID."""
         result = await self._session.execute(select(Ticket).where(Ticket.id == ticket_id))
         return result.scalars().one()
 
     @transactional
     async def update_ticket(self, ticket_id: UUID, payload: TicketUpdate) -> Ticket:
-        """Update ticket details using Core-style DML."""
-
         update_data = payload.model_dump(exclude_unset=True)
 
         if not update_data:
@@ -76,18 +73,14 @@ class TicketService:
         """
         ticket = await self.get_ticket(ticket_id)
 
-        # Idempotent: already ready and not forced
         if ticket.pdf_status == PdfStatus.READY and ticket.pdf_s3_key and not body.force:
             logger.info(f'PDF already ready for ticket {ticket_id}')
             return PdfStatusResponse(ticket_id=ticket_id, status=PdfStatus.READY)
 
-        # Guard: already in progress
         if ticket.pdf_status == PdfStatus.GENERATING and not body.force:
             logger.info(f'PDF generation already in progress for ticket {ticket_id}')
             return PdfStatusResponse(ticket_id=ticket_id, status=PdfStatus.GENERATING)
 
-        # Invoke Lambda asynchronously (fire-and-forget)
-        # Lambda will handle all status updates (PENDING → GENERATING → READY/FAILED)
         try:
             await self._lambda_service.trigger_ticket_generator_lambda(ticket_id=ticket_id, force=body.force)
             logger.info(f'Lambda invoked successfully for ticket {ticket_id}')
@@ -102,7 +95,6 @@ class TicketService:
         return PdfStatusResponse(ticket_id=ticket_id, status=PdfStatus.GENERATING)
 
     async def stream_ticket_pdf(self, ticket_id: UUID):
-        """Stream ticket PDF from S3."""
         ticket = await self.get_ticket(ticket_id)
 
         if ticket.pdf_status != PdfStatus.READY or not ticket.pdf_s3_key:

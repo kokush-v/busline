@@ -1,3 +1,4 @@
+from asyncio import TaskGroup
 from datetime import UTC, datetime
 import logging
 from uuid import UUID
@@ -28,12 +29,10 @@ class OrderService:
         self._ticket_service = ticket_service
 
     async def get_order(self, order_id: UUID) -> Order:
-        """Get order details by ID."""
         result = await self._session.execute(select(Order).where(Order.id == order_id))
         return result.scalars().one()
 
     async def get_user_orders(self, user_id: UUID) -> list[Order]:
-        """Get all orders for a specific user."""
         result = await self._session.execute(select(Order).where(Order.user_id == user_id))
         orders = result.scalars().all()
         return orders
@@ -43,6 +42,23 @@ class OrderService:
         order_result = await self._session.execute(order_stmt)
         order = order_result.scalar_one()
         return order
+
+    async def __trigger_pdf_for_ticket(self, ticket, order_id: UUID) -> None:
+        try:
+            from app.features.ticket.schemas import CreatePdfRequest
+
+            await self._ticket_service.trigger_pdf_generation(ticket_id=ticket.id, body=CreatePdfRequest(force=False))
+        except Exception as e:
+            logger.error(
+                f'Failed to trigger PDF generation for ticket {ticket.id}: {str(e)}',
+                exc_info=True,
+                extra={'ticket_id': str(ticket.id), 'order_id': str(order_id)},
+            )
+
+    async def __trigger_pdf_for_all_tickets(self, order: Order) -> None:
+        async with TaskGroup() as tg:
+            for ticket in order.tickets:
+                tg.create_task(self.__trigger_pdf_for_ticket(ticket, order.id))
 
     @transactional
     async def pay_order(self, order_id: UUID) -> Order:
@@ -66,23 +82,7 @@ class OrderService:
 
         await self._session.execute(update_seats_stmt)
 
-        # Trigger PDF generation for all tickets in the order
-        tickets = order.tickets
-        for ticket in tickets:
-            try:
-                from app.features.ticket.schemas import CreatePdfRequest
-
-                await self._ticket_service.trigger_pdf_generation(
-                    ticket_id=ticket.id, body=CreatePdfRequest(force=False)
-                )
-            except Exception as e:
-                # Log the error but continue processing other tickets
-                # The ticket PDF status will be updated accordingly
-                logger.error(
-                    f'Failed to trigger PDF generation for ticket {ticket.id}: {str(e)}',
-                    exc_info=True,
-                    extra={'ticket_id': str(ticket.id), 'order_id': str(order.id)},
-                )
+        await self.__trigger_pdf_for_all_tickets(order)
 
         return order
 
@@ -100,10 +100,14 @@ class OrderService:
         stmt = update(Order).where(Order.id == order_id).values(status=OrderStatus.CANCELLED)
         await self._session.execute(stmt)
 
-        # Core-style bulk update for seats related to order tickets
         seat_ids_subquery = select(Ticket.seat_id).where(Ticket.order_id == order_id)
         update_seats_stmt = update(Seat).where(Seat.id.in_(seat_ids_subquery)).values(status=SeatStatus.FREE)
         await self._session.execute(update_seats_stmt)
+
+    async def __cancel_all_expired_orders(self, order_ids: list[UUID]) -> None:
+        async with TaskGroup() as tg:
+            for order_id in order_ids:
+                tg.create_task(self._cancel_order(order_id))
 
     @transactional
     async def cleanup_expired_orders(self) -> int:
@@ -126,13 +130,11 @@ class OrderService:
         )
         expired_order_ids = result.scalars().all()
 
-        for order_id in expired_order_ids:
-            await self._cancel_order(order_id)
+        await self.__cancel_all_expired_orders(expired_order_ids)
 
         return len(expired_order_ids)
 
     async def get_order_tickets(self, order_id: UUID) -> list[Ticket]:
-        """Get all tickets for a specific order."""
         stmt = select(Ticket).join(Order, Ticket.order_id == Order.id).where(Order.id == order_id)
         result = await self._session.execute(stmt)
 

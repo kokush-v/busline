@@ -19,17 +19,13 @@ class CityService:
     def __init__(self, session: AsyncSession = Depends(get_db_session)):
         self._session = session
 
-    async def get_cities(self, params: CityQueryParams) -> tuple[list[City], int]:
-        """Get cities with filtering, sorting, and pagination."""
-        query = select(City)
+    def __apply_search_filter(self, query, params: CityQueryParams):
+        if not params.search:
+            return query
 
-        if params.search:
-            query = query.where(City.name.ilike(f'%{params.search}%'))
+        return query.where(City.name.ilike(f'%{params.search}%'))
 
-        count_query = select(func.count()).select_from(query.subquery())
-        total_result = await self._session.execute(count_query)
-        total = total_result.scalar_one()
-
+    def __apply_sorting(self, query, params: CityQueryParams):
         match params.sort_by:
             case CitySortBy.NAME:
                 sort_column = City.name
@@ -44,7 +40,24 @@ class CityService:
             case _:
                 query = query.order_by(asc(sort_column))
 
-        query = query.limit(params.limit).offset(params.offset)
+        return query
+
+    def __apply_pagination(self, query, params: CityQueryParams):
+        return query.limit(params.limit).offset(params.offset)
+
+    async def __get_total_count(self, query) -> int:
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self._session.execute(count_query)
+        return total_result.scalar_one()
+
+    async def get_cities(self, params: CityQueryParams) -> tuple[list[City], int]:
+        """Get cities with filtering, sorting, and pagination."""
+        query = select(City)
+
+        query = self.__apply_search_filter(query, params)
+        total = await self.__get_total_count(query)
+        query = self.__apply_sorting(query, params)
+        query = self.__apply_pagination(query, params)
 
         result = await self._session.execute(query)
         cities = list(result.scalars().all())
