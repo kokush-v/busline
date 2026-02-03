@@ -1,4 +1,5 @@
 from functools import lru_cache
+import logging
 from urllib.parse import urlparse
 
 import aioboto3
@@ -16,6 +17,7 @@ class S3Service:
     def __init__(self):
         self._settings = get_env_settings()
         self._session = aioboto3.Session()
+        self._logger = logging.getLogger(__name__)
 
     @property
     def _client_kwargs(self):
@@ -53,7 +55,7 @@ class S3Service:
                 return presigned_post
         except ClientError as e:
             raise S3Exception(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 message='Failed to generate presigned upload URL',
                 details={'error': str(e)},
             ) from e
@@ -100,7 +102,7 @@ class S3Service:
                 return url
         except ClientError as e:
             raise S3Exception(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 message='Failed to generate presigned download URL',
                 details={'error': str(e)},
             ) from e
@@ -127,17 +129,55 @@ class S3Service:
                     yield chunk
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')
-            if error_code == 'NoSuchKey':
-                raise S3Exception(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    message='File not found in S3',
-                    details={'bucket': bucket, 'key': key},
-                ) from e
-            raise S3Exception(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                message='Failed to download file from S3',
-                details={'error': str(e)},
-            ) from e
+            match error_code:
+                case 'NoSuchKey':
+                    raise S3Exception(
+                        status=status.HTTP_404_NOT_FOUND,
+                        message='File not found in S3',
+                        details={'bucket': bucket, 'key': key},
+                    ) from e
+                case 'AccessDenied':
+                    raise S3Exception(
+                        status=status.HTTP_403_FORBIDDEN,
+                        message='Access denied to S3 object',
+                        details={'bucket': bucket, 'key': key},
+                    ) from e
+                case _:
+                    raise S3Exception(
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        message='Failed to download file from S3',
+                        details={'error': str(e)},
+                    ) from e
+
+    async def validate_object_access(self, bucket: str, key: str) -> None:
+        """
+        Validate that the object exists and is accessible before streaming.
+        This avoids raising after the HTTP response has already started.
+        """
+        try:
+            async with self._session.client(**self._client_kwargs) as s3_client:
+                await s3_client.head_object(Bucket=bucket, Key=key)
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            match error_code:
+                case 'NoSuchKey':
+                    raise S3Exception(
+                        status=status.HTTP_404_NOT_FOUND,
+                        message='File not found in S3',
+                        details={'bucket': bucket, 'key': key},
+                    ) from e
+                case 'AccessDenied':
+                    raise S3Exception(
+                        status=status.HTTP_403_FORBIDDEN,
+                        message='Access denied to S3 object',
+                        details={'bucket': bucket, 'key': key},
+                    ) from e
+                case _:
+                    raise S3Exception(
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        message='Failed to access S3 object',
+                        details={'error': str(e)},
+                    ) from e
 
 
 @lru_cache(maxsize=1)

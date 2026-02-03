@@ -112,6 +112,11 @@ class TicketService:
                 details={'ticket_id': str(ticket_id), 'pdf_status': ticket.pdf_status},
             )
 
+        await self._s3_service.validate_object_access(
+            bucket=self._settings.S3_TICKETS_BUCKET,
+            key=ticket.pdf_s3_key,
+        )
+
         return self._s3_service.download_file(
             bucket=self._settings.S3_TICKETS_BUCKET,
             key=ticket.pdf_s3_key,
