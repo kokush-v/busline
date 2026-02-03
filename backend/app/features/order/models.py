@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 import uuid
 
-from sqlalchemy import DateTime, Enum, Numeric, String, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,6 +12,7 @@ from app.features.order.enums import OrderStatus
 
 if TYPE_CHECKING:
     from app.features.ticket.models import Ticket
+    from app.features.user.models import User
 
 
 class Order(Base):
@@ -26,9 +27,10 @@ class Order(Base):
         default=uuid.uuid4,
     )
 
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
+    user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        nullable=True,
+        ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False,
     )
 
     status: Mapped[OrderStatus] = mapped_column(
@@ -51,6 +53,7 @@ class Order(Base):
         onupdate=func.now(),
     )
 
+    user: Mapped['User'] = relationship('User', back_populates='orders', lazy='selectin')
     tickets: Mapped[list['Ticket']] = relationship(
         'Ticket',
         back_populates='order',

@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class UserRole(StrEnum):
+class UserRoleGroups(StrEnum):
     """User role enumeration for RBAC."""
 
     ADMIN = 'ADMIN'

@@ -141,6 +141,7 @@ def _aws_mock():
 
         # Clear S3Service cache so it picks up mocked AWS
         from app.core.s3_service import get_s3_service
+
         get_s3_service.cache_clear()
 
         yield

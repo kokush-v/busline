@@ -1,12 +1,16 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 import uuid
 
 from sqlalchemy import Boolean, DateTime, Enum, String, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.db import Base
-from app.features.user.enums import UserRole
+from app.features.user.enums import UserRoleGroups
+
+if TYPE_CHECKING:
+    from app.features.order.models import Order
 
 
 class User(Base):
@@ -24,9 +28,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name='userrole'),
-        default=UserRole.USER,
+    role: Mapped[UserRoleGroups] = mapped_column(
+        Enum(UserRoleGroups, name='userrole'),
+        default=UserRoleGroups.USER,
         nullable=False,
     )
 
@@ -37,3 +41,5 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    orders: Mapped[list['Order']] = relationship('Order', back_populates='user', lazy='selectin')

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # Lambda
     TICKET_PDF_LAMBDA_NAME: str = 'ticket-pdf-generator'
 
+    # Cognito
+    COGNITO_USER_POOL_ID: str = ''
+    COGNITO_CLIENT_ID: str = ''
+
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
 

@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.core.roles import RoleChecker
+from app.core.aws.cognito import get_cognito_service
 from app.features.seat.schemas import SeatRead
 from app.features.trip.schemas import (
     TripCreate,
@@ -13,12 +13,10 @@ from app.features.trip.schemas import (
     TripUpdate,
 )
 from app.features.trip.service import TripService
-from app.features.user.enums import UserRole
+from app.features.user.enums import UserRoleGroups
 
+cognito_service = get_cognito_service()
 router = APIRouter(prefix='/trips', tags=['Trips'])
-
-# TODO: Apply admin_only dependency to appropriate routes
-admin_only = RoleChecker([UserRole.ADMIN])
 
 
 @router.get('', response_model=TripListResponse)
@@ -47,7 +45,11 @@ async def get_trip(trip_id: UUID, service: TripService = Depends()):
     response_model=TripRead,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_trip(payload: TripCreate, service: TripService = Depends()):
+async def create_trip(
+    payload: TripCreate,
+    service: TripService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     return await service.create_trip(payload)
 
 
@@ -55,7 +57,12 @@ async def create_trip(payload: TripCreate, service: TripService = Depends()):
     '/{trip_id}',
     response_model=TripRead,
 )
-async def update_trip(trip_id: UUID, payload: TripUpdate, service: TripService = Depends()):
+async def update_trip(
+    trip_id: UUID,
+    payload: TripUpdate,
+    service: TripService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     return await service.update_trip(trip_id, payload)
 
 
@@ -63,7 +70,11 @@ async def update_trip(trip_id: UUID, payload: TripUpdate, service: TripService =
     '/{trip_id}',
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def delete_trip(trip_id: UUID, service: TripService = Depends()):
+async def delete_trip(
+    trip_id: UUID,
+    service: TripService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     await service.delete_trip(trip_id)
 
 

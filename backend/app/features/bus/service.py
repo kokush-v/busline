@@ -5,8 +5,8 @@ import httpx
 from sqlalchemy import asc, delete, desc, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.aws.s3_service import S3Service, get_s3_service
 from app.core.exeptions import ServerException
-from app.core.s3_service import S3Service, get_s3_service
 from app.database.db import get_db_session
 from app.features.bus.enums import BusSortBy
 from app.features.bus.models import Bus
