@@ -60,7 +60,6 @@ class SeatService:
         return list(result.scalars().all())
 
     async def __validate_trip_stops(self, trip_id: UUID, tickets_ids) -> None:
-        """Validate that all start and finish stops exist in the trip concurrently."""
         async with TaskGroup() as tg:
             for ticket in tickets_ids:
                 tg.create_task(
@@ -70,7 +69,6 @@ class SeatService:
                 )
 
     async def __validate_seats_availability(self, trip_id: UUID, seat_ids: list[UUID]) -> list:
-        """Validate that seats exist and are all free."""
         stmt = (
             select(Seat.id, Seat.status, Seat.position_index)
             .where(Seat.trip_id == trip_id, Seat.id.in_(seat_ids))
@@ -89,7 +87,6 @@ class SeatService:
         return seats
 
     async def __create_order_for_reservation(self, trip_price: Decimal, seats_count: int) -> OrderCreate:
-        """Create order data for seat reservation."""
         price_per_seat = Decimal(str(trip_price))
         total_price = price_per_seat * seats_count
         expires_at = datetime.now(UTC) + timedelta(minutes=30)
@@ -101,11 +98,9 @@ class SeatService:
         )
 
     async def __lock_reserved_seats(self, seat_ids: list[UUID]) -> None:
-        """Lock seats by marking them as LOCKED."""
         await self._session.execute(update(Seat).where(Seat.id.in_(seat_ids)).values(status=SeatStatus.LOCKED))
 
     def __prepare_tickets_data(self, order_id: UUID, trip_id: UUID, price_per_seat: Decimal, tickets_ids) -> list:
-        """Prepare ticket data for bulk creation."""
         return [
             TicketCreate(
                 order_id=order_id,
