@@ -1,10 +1,9 @@
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.roles import RoleChecker, UserRole
-from app.features.stop.schemas import StopCreate, StopRead, StopUpdate
+from app.features.stop.schemas import StopCreate, StopListResponse, StopQueryParams, StopRead, StopUpdate
 from app.features.stop.service import StopService
 
 router = APIRouter(prefix='/stops', tags=['Stops'])
@@ -13,13 +12,20 @@ router = APIRouter(prefix='/stops', tags=['Stops'])
 admin_only = RoleChecker([UserRole.ADMIN])
 
 
-@router.get('', response_model=list[StopRead])
+@router.get('', response_model=StopListResponse)
 async def get_stops(
-    search: Annotated[str | None, Query(description='Search stops by city or stop name')] = None,
+    params: StopQueryParams = Depends(),
     service: StopService = Depends(),
 ):
-    """Get a list of stops with optional search by city or stop name (public access)."""
-    return await service.get_stops(search=search)
+    """Get a list of stops with optional search and pagination (public access)."""
+    stops, total = await service.get_stops(params)
+
+    return StopListResponse(
+        items=stops,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
 
 
 @router.get('/{stop_id}', response_model=StopRead)

@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 import uuid
 
@@ -7,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Numeric,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -16,6 +18,7 @@ from app.database.db import Base
 
 if TYPE_CHECKING:
     from app.features.bus.models import Bus
+    from app.features.seat.models import Seat
     from app.features.trip_stop.models import TripStop
 
 
@@ -38,6 +41,12 @@ class Trip(Base):
     )
     bus: Mapped['Bus'] = relationship('Bus', lazy='selectin')
 
+    price_per_seat: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        default=Decimal('0'),
+        server_default='0',
+        nullable=False,
+    )
     seats_left: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -48,6 +57,13 @@ class Trip(Base):
 
     trip_stops: Mapped[list['TripStop']] = relationship(
         'TripStop',
+        back_populates='trip',
+        cascade='all, delete-orphan',
+        lazy='selectin',
+    )
+
+    seats: Mapped[list['Seat']] = relationship(
+        'Seat',
         back_populates='trip',
         cascade='all, delete-orphan',
         lazy='selectin',

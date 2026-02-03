@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
+from alembic.config import Config as AlembicConfig
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -67,3 +68,25 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     db_helper = get_database_helper()
     async with db_helper.session_scope() as session:
         yield session
+
+
+def get_async_session_maker() -> async_sessionmaker[AsyncSession]:
+    """Get async session maker for background tasks."""
+    db_helper = get_database_helper()
+    return db_helper.session_factory
+
+
+def get_alembic_config(database_url: str, script_location: str = 'migrations') -> AlembicConfig:
+    """Create alembic config for running migrations programmatically.
+
+    Args:
+        database_url: Database URL (sync psycopg URL expected)
+        script_location: Path to migrations directory
+
+    Returns:
+        Configured AlembicConfig instance
+    """
+    alembic_config = AlembicConfig()
+    alembic_config.set_main_option('script_location', script_location)
+    alembic_config.set_main_option('sqlalchemy.url', database_url)
+    return alembic_config

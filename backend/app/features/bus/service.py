@@ -1,20 +1,24 @@
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, UploadFile, status
+from fastapi import Depends, UploadFile
 import httpx
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import asc, delete, desc, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exeptions import ServerException
 from app.core.s3_service import S3Service, get_s3_service
 from app.database.db import get_db_session
+from app.features.bus.enums import BusSortBy
 from app.features.bus.models import Bus
 from app.features.bus.schemas import (
     BusCreate,
+    BusQueryParams,
     BusUpdate,
     PresignedUrlRequest,
     PresignedUrlResponse,
     TestUploadRequest,
 )
+from app.features.trip.enums import SortOrder
 from app.settings.env import get_env_settings
 
 
@@ -30,9 +34,80 @@ class BusService:
         self._settings = get_env_settings()
         self._s3_service = s3_service
 
-    async def get_buses(self) -> list[Bus]:
-        result = await self._session.execute(select(Bus))
-        return list(result.scalars().all())
+    def __apply_search_filter(self, query, params: BusQueryParams):
+        if not params.search:
+            return query
+
+        return query.where(
+            or_(
+                Bus.number_plate.ilike(f'%{params.search}%'),
+                Bus.color.ilike(f'%{params.search}%'),
+            )
+        )
+
+    def __apply_seats_filters(self, query, params: BusQueryParams):
+        if params.min_seats is not None:
+            query = query.where(Bus.seats_quantity >= params.min_seats)
+        if params.max_seats is not None:
+            query = query.where(Bus.seats_quantity <= params.max_seats)
+        return query
+
+    def __apply_photo_filter(self, query, params: BusQueryParams):
+        if params.has_photo is None:
+            return query
+
+        if params.has_photo:
+            query = query.where(Bus.photo_url.isnot(None))
+        else:
+            query = query.where(Bus.photo_url.is_(None))
+        return query
+
+    def __apply_sorting(self, query, params: BusQueryParams):
+        match params.sort_by:
+            case BusSortBy.NUMBER_PLATE:
+                sort_column = Bus.number_plate
+            case BusSortBy.COLOR:
+                sort_column = Bus.color
+            case BusSortBy.SEATS_QUANTITY:
+                sort_column = Bus.seats_quantity
+            case BusSortBy.CREATED_AT:
+                sort_column = Bus.created_at
+            case _:
+                sort_column = Bus.created_at
+
+        match params.sort_order:
+            case SortOrder.DESC:
+                query = query.order_by(desc(sort_column))
+            case _:
+                query = query.order_by(asc(sort_column))
+
+        return query
+
+    def __apply_pagination(self, query, params: BusQueryParams):
+        return query.limit(params.limit).offset(params.offset)
+
+    async def __get_total_count(self, query) -> int:
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self._session.execute(count_query)
+        return total_result.scalar_one()
+
+    async def get_buses(self, params: BusQueryParams) -> tuple[list[Bus], int]:
+        """Get buses with filtering, sorting, and pagination."""
+        query = select(Bus)
+
+        query = self.__apply_search_filter(query, params)
+        query = self.__apply_seats_filters(query, params)
+        query = self.__apply_photo_filter(query, params)
+
+        total = await self.__get_total_count(query)
+
+        query = self.__apply_sorting(query, params)
+        query = self.__apply_pagination(query, params)
+
+        result = await self._session.execute(query)
+        buses = list(result.scalars().all())
+
+        return buses, total
 
     async def get_bus(self, bus_id: UUID) -> Bus:
         result = await self._session.execute(select(Bus).where(Bus.id == bus_id))
@@ -41,7 +116,8 @@ class BusService:
 
     async def create_bus(self, payload: BusCreate) -> Bus:
         result = await self._session.execute(select(Bus).filter(Bus.number_plate == payload.number_plate))
-        result.scalar_one()
+        if result.scalar_one_or_none():
+            raise ServerException(message='Bus with this number plate already exists', status=400)
 
         stmt = insert(Bus).values(**payload.model_dump()).returning(Bus)
         result = await self._session.execute(stmt)
@@ -56,7 +132,8 @@ class BusService:
             result = await self._session.execute(
                 select(Bus).filter(Bus.number_plate == update_data['number_plate'], Bus.id != bus_id)
             )
-            result.scalar_one()
+            if result.scalar_one_or_none():
+                raise ServerException(message='Bus with this number plate already exists', status=400)
 
         stmt = update(Bus).where(Bus.id == bus_id).values(**update_data).returning(Bus)
         result = await self._session.execute(stmt)
@@ -173,7 +250,4 @@ class BusService:
                         'response': response.text,
                     }
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f'Failed to upload file: {str(e)}',
-            ) from e
+            raise ServerException(message=f'Failed to upload file: {str(e)}') from e

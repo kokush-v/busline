@@ -2,15 +2,26 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.features.city.schemas import CityCreate, CityRead, CityUpdate
+from app.features.city.schemas import CityCreate, CityListResponse, CityQueryParams, CityRead, CityUpdate
 from app.features.city.service import CityService
 
 router = APIRouter(prefix='/cities', tags=['Cities'])
 
 
-@router.get('', response_model=list[CityRead])
-async def get_cities(service: CityService = Depends()):
-    return await service.get_cities()
+@router.get('', response_model=CityListResponse)
+async def get_cities(
+    params: CityQueryParams = Depends(),
+    service: CityService = Depends(),
+):
+    """Get cities with filtering, sorting, and pagination."""
+    cities, total = await service.get_cities(params)
+
+    return CityListResponse(
+        items=cities,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
 
 
 @router.get('/{city_id}', response_model=CityRead)

@@ -7,7 +7,6 @@ from app.common.schemas import EntityModel
 
 
 class TripStopBase(BaseModel):
-    trip_id: UUID
     stop_id: UUID
     position_index: int
     arrival_time: datetime

@@ -3,8 +3,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 
 from app.core.roles import RoleChecker, UserRole
+from app.features.seat.schemas import SeatRead
 from app.features.trip.schemas import (
     TripCreate,
+    TripListResponse,
+    TripQueryParams,
     TripRead,
     TripReadPublic,
     TripUpdate,
@@ -17,9 +20,20 @@ router = APIRouter(prefix='/trips', tags=['Trips'])
 admin_only = RoleChecker([UserRole.ADMIN])
 
 
-@router.get('', response_model=list[TripReadPublic])
-async def get_trips(service: TripService = Depends()):
-    return await service.get_trips()
+@router.get('', response_model=TripListResponse)
+async def get_trips(
+    params: TripQueryParams = Depends(),
+    service: TripService = Depends(),
+):
+    """Get trips with filtering, sorting, and pagination."""
+    trips, total = await service.get_trips(params)
+
+    return TripListResponse(
+        items=trips,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
 
 
 @router.get('/{trip_id}', response_model=TripReadPublic)
@@ -50,3 +64,9 @@ async def update_trip(trip_id: UUID, payload: TripUpdate, service: TripService =
 )
 async def delete_trip(trip_id: UUID, service: TripService = Depends()):
     await service.delete_trip(trip_id)
+
+
+@router.get('/{trip_id}/seats', response_model=list[SeatRead])
+async def get_trip_seats(trip_id: UUID, service: TripService = Depends()):
+    """Get all seats for a specific trip."""
+    return await service.get_seats(trip_id)

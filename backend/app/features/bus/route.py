@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from app.core.roles import RoleChecker, UserRole
 from app.features.bus.schemas import (
     BusCreate,
+    BusListResponse,
+    BusQueryParams,
     BusRead,
     BusUpdate,
     PhotoUploadComplete,
@@ -16,12 +18,24 @@ from app.features.bus.service import BusService
 
 router = APIRouter(prefix='/buses', tags=['Buses'])
 
+# TODO: Apply admin_only dependency to routes that require admin access
 admin_only = RoleChecker([UserRole.ADMIN])
 
 
-@router.get('', response_model=list[BusRead])
-async def get_buses(service: BusService = Depends()):
-    return await service.get_buses()
+@router.get('', response_model=BusListResponse)
+async def get_buses(
+    params: BusQueryParams = Depends(),
+    service: BusService = Depends(),
+):
+    """Get buses with filtering, sorting, and pagination."""
+    buses, total = await service.get_buses(params)
+
+    return BusListResponse(
+        items=buses,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
 
 
 @router.get('/{bus_id}', response_model=BusRead)
