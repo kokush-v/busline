@@ -91,10 +91,6 @@ class UserService:
         user = result.scalars().one()
         return user
 
-    async def get_user_by_email(self, email: str) -> User | None:
-        result = await self._session.execute(select(User).where(User.email == email))
-        return result.scalars().one_or_none()
-
     async def __create_user_in_cognito(self, email: str, name: str | None, role: str) -> str:
         """Create user in Cognito with specified role and return the user sub."""
         response = await self._cognito.admin_create_user(
