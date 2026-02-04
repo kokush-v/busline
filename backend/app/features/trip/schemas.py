@@ -84,6 +84,8 @@ class TripRead(EntityModel):
 class TripReadPublic(BaseModel):
     """Public view of trip with limited information."""
 
+    model_config = {'from_attributes': True}
+
     id: UUID
     bus_id: UUID
     price_per_seat: float

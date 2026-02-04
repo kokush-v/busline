@@ -63,7 +63,8 @@ class TestBusesList:
     async def test_list_empty(self, session: AsyncSession, client: AsyncClient):
         response = await client.get('/buses')
         assert response.status_code == 200
-        assert response.json() == []
+        assert response.json()['items'] == []
+        assert response.json()['total'] == 0
 
     async def test_list(self, session: AsyncSession, client: AsyncClient):
         bus = await create_test_bus(session)
@@ -71,7 +72,8 @@ class TestBusesList:
         response = await client.get('/buses')
         assert response.status_code == 200
 
-        response_buses = TypeAdapter(list[BusRead]).validate_python(response.json())
+        data = response.json()
+        response_buses = TypeAdapter(list[BusRead]).validate_python(data['items'])
         assert len(response_buses) == 1
         assert response_buses[0].number_plate == bus.number_plate
 

@@ -1,4 +1,3 @@
-from asyncio import TaskGroup
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
@@ -60,13 +59,10 @@ class SeatService:
         return list(result.scalars().all())
 
     async def __validate_trip_stops(self, trip_id: UUID, tickets_ids) -> None:
-        async with TaskGroup() as tg:
-            for ticket in tickets_ids:
-                tg.create_task(
-                    self._trip_stop_service.validate_stops_exist_in_trip(
-                        trip_id, ticket.start_stop_id, ticket.finish_stop_id
-                    )
-                )
+        for ticket in tickets_ids:
+            await self._trip_stop_service.validate_stops_exist_in_trip(
+                trip_id, ticket.start_stop_id, ticket.finish_stop_id
+            )
 
     async def __validate_seats_availability(self, trip_id: UUID, seat_ids: list[UUID]) -> list:
         stmt = (
