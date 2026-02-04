@@ -1,4 +1,4 @@
-.PHONY: help install run dev test lint format clean migrations migrate downgrade
+.PHONY: help install run dev test lint format clean migrations migrate downgrade open-db-conn connect-ec2
 
 help:
 	@echo "🚀 Busline Backend Commands"
@@ -27,6 +27,7 @@ help:
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean            - Remove cache files and directories"
+	@echo "  make open-db-conn     - Open database connection"
 	@echo ""
 
 install:
@@ -84,6 +85,12 @@ lint-no-format:
 format:
 	@echo "✨ Formatting code..."
 	poetry run ruff format app/
+
+connect-ec2:
+	ssh -i "busline-backend-key.pem" ubuntu@ec2-host.example.com
+
+open-db-conn:
+	./open-db-connection.sh
 
 clean:
 	@echo "🧹 Cleaning cache files..."
