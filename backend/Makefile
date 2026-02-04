@@ -32,7 +32,7 @@ help:
 
 install:
 	@echo "📦 Installing dependencies..."
-	poetry install
+	poetry install --no-root
 
 dev:
 	@echo "🔨 Starting development server..."
