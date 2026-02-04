@@ -17,8 +17,7 @@ help:
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test             - Run all tests"
-	@echo "  make test-integration - Run integration tests"
-	@echo "  make test-unit        - Run unit tests"
+	@echo "  make test-api         - Run API tests"
 	@echo "  make test-feature     - Run tests for specific feature (FEATURE=city)"
 	@echo ""
 	@echo "Code Quality:"
@@ -61,13 +60,9 @@ test:
 	@echo "🧪 Running all tests..."
 	poetry run pytest tests/ -v
 
-test-integration:
-	@echo "🧪 Running integration tests..."
-	poetry run pytest tests/integration/ -v
-
-test-unit:
-	@echo "🧪 Running unit tests..."
-	poetry run pytest tests/unit/ -v
+test-api:
+	@echo "🧪 Running API tests..."
+	poetry run pytest tests/api/ -v
 
 test-feature:
 	@echo "🧪 Running tests for feature: $(FEATURE)..."
@@ -75,7 +70,7 @@ test-feature:
 		echo "Error: FEATURE not provided. Use: make test-feature FEATURE=city"; \
 		exit 1; \
 	fi
-	poetry run pytest tests/integration/features/$(FEATURE)/ tests/unit/features/$(FEATURE)/ -v
+	poetry run pytest tests/api/test_$(FEATURE).py -v
 
 lint:
 	@echo "🔍 Formatting and checking code..."
