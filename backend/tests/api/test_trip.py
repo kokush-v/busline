@@ -50,9 +50,7 @@ async def create_test_trip(
     bus = bus_result.scalar_one()
 
     trip_stmt = (
-        insert(Trip)
-        .values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity)
-        .returning(Trip)
+        insert(Trip).values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity).returning(Trip)
     )
     trip_result = await session.execute(trip_stmt)
     trip = trip_result.scalar_one()
