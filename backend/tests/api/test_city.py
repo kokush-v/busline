@@ -54,7 +54,8 @@ class TestCitiesList:
     async def test_list_empty(self, session: AsyncSession, client: AsyncClient):
         response = await client.get('/cities')
         assert response.status_code == 200
-        assert response.json() == []
+        assert response.json()['items'] == []
+        assert response.json()['total'] == 0
 
     async def test_list(self, session: AsyncSession, client: AsyncClient):
         city = await create_test_city(session)
@@ -62,7 +63,8 @@ class TestCitiesList:
         response = await client.get('/cities')
         assert response.status_code == 200
 
-        response_cities = TypeAdapter(list[CityRead]).validate_python(response.json())
+        data = response.json()
+        response_cities = TypeAdapter(list[CityRead]).validate_python(data['items'])
         assert len(response_cities) == 1
         assert response_cities[0].name == city.name
 

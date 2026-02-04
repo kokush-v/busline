@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from httpx import AsyncClient
 from pydantic import TypeAdapter
+from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.bus.schemas import BusRead
@@ -12,8 +13,7 @@ from app.features.city.service import CityService
 from app.features.seat.service import SeatService
 from app.features.stop.schemas import StopRead
 from app.features.stop.service import StopService
-from app.features.trip.schemas import TripCreate, TripRead, TripReadPublic
-from app.features.trip.service import TripService
+from app.features.trip.schemas import TripRead, TripReadPublic
 from app.features.trip_stop.schemas import TripStopCreate
 from tests.factories import BusCreateFactory, CityCreateFactory, StopCreateFactory, TripStopCreateFactory
 
@@ -37,28 +37,44 @@ async def create_test_stop(session: AsyncSession, city_id, **kwargs) -> StopRead
     return StopRead.model_validate(stop)
 
 
-async def create_test_trip(session: AsyncSession, bus_id, stops: list[TripStopCreate] | None = None) -> TripRead:
-    trip_creation = TripCreate(bus_id=bus_id, stops=stops or [])
-    bus_service = BusService(session)
-    city_service = CityService(session)
-    stop_service = StopService(session, city_service)
+async def create_test_trip(
+    session: AsyncSession, bus_id, stops: list[TripStopCreate] | None = None, price_per_seat: float = 100.0
+) -> TripRead:
+    from sqlalchemy import select
+
+    from app.features.bus.models import Bus
+    from app.features.trip.models import Trip
+    from app.features.trip_stop.models import TripStop
+
+    bus_result = await session.execute(select(Bus).where(Bus.id == bus_id))
+    bus = bus_result.scalar_one()
+
+    trip_stmt = (
+        insert(Trip)
+        .values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity)
+        .returning(Trip)
+    )
+    trip_result = await session.execute(trip_stmt)
+    trip = trip_result.scalar_one()
+
     seat_service = SeatService(session, ticket_service=None, order_service=None, trip_stop_service=None)
-    trip = await TripService(session, bus_service, stop_service, seat_service).create_trip(trip_creation)
+    await seat_service._create_seats_for_bus(bus.seats_quantity, trip.id)
+
+    if stops:
+        stops_data = [{**stop.model_dump(), 'trip_id': trip.id} for stop in stops]
+        await session.execute(insert(TripStop).values(stops_data))
+
+    await session.refresh(trip)
     return TripRead.model_validate(trip)
 
 
 class TestTripsCreate:
-    async def test_success_without_stops(self, session: AsyncSession, client: AsyncClient):
+    async def test_fail_without_stops(self, session: AsyncSession, client: AsyncClient):
         bus = await create_test_bus(session)
-        payload = {'bus_id': str(bus.id), 'stops': []}
+        payload = {'bus_id': str(bus.id), 'price_per_seat': 100.0, 'stops': []}
 
         response = await client.post('/trips', json=payload)
-        assert response.status_code == 201
-
-        created_trip = TripRead.model_validate(response.json())
-        assert created_trip.bus_id == bus.id
-        assert created_trip.seats_left == bus.seats_quantity
-        assert created_trip.trip_stops == []
+        assert response.status_code == 422
 
     async def test_success_with_stops(self, session: AsyncSession, client: AsyncClient):
         bus = await create_test_bus(session)
@@ -71,6 +87,7 @@ class TestTripsCreate:
 
         payload = {
             'bus_id': str(bus.id),
+            'price_per_seat': 150.0,
             'stops': [
                 {
                     'stop_id': str(trip_stop1.stop_id),
@@ -100,7 +117,25 @@ class TestTripsCreate:
         assert len(fetched_trip.trip_stops) == 2
 
     async def test_fail_bus_not_found(self, session: AsyncSession, client: AsyncClient):
-        payload = {'bus_id': str(uuid4()), 'stops': []}
+        base_time = datetime.now(UTC) + timedelta(days=1)
+        payload = {
+            'bus_id': str(uuid4()),
+            'price_per_seat': 100.0,
+            'stops': [
+                {
+                    'stop_id': str(uuid4()),
+                    'position_index': 1,
+                    'arrival_time': base_time.isoformat(),
+                    'departure_time': (base_time + timedelta(minutes=15)).isoformat(),
+                },
+                {
+                    'stop_id': str(uuid4()),
+                    'position_index': 2,
+                    'arrival_time': (base_time + timedelta(hours=1)).isoformat(),
+                    'departure_time': (base_time + timedelta(hours=1, minutes=15)).isoformat(),
+                },
+            ],
+        }
 
         response = await client.post('/trips', json=payload)
         assert response.status_code == 404
@@ -172,18 +207,20 @@ class TestTripsCreate:
 
 class TestTripsList:
     async def test_list_empty(self, session: AsyncSession, client: AsyncClient):
-        response = await client.get('/trips')
+        response = await client.get('/trips', params={'sort_by': 'CREATED_AT'})
         assert response.status_code == 200
-        assert response.json() == []
+        assert response.json()['items'] == []
+        assert response.json()['total'] == 0
 
     async def test_list(self, session: AsyncSession, client: AsyncClient):
         bus = await create_test_bus(session)
         trip = await create_test_trip(session, bus.id)
 
-        response = await client.get('/trips')
+        response = await client.get('/trips', params={'sort_by': 'CREATED_AT'})
         assert response.status_code == 200
 
-        response_trips = TypeAdapter(list[TripReadPublic]).validate_python(response.json())
+        data = response.json()
+        response_trips = TypeAdapter(list[TripReadPublic]).validate_python(data['items'])
         assert len(response_trips) == 1
         assert response_trips[0].bus_id == trip.bus_id
 

@@ -27,8 +27,11 @@ def get_url() -> str:
     database_url = settings.DATABASE_URL
 
     # Convert URL to use psycopg3 sync driver for alembic
-    if database_url and database_url.startswith('postgresql://'):
-        database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    if database_url:
+        if '+asyncpg' in database_url:
+            database_url = database_url.replace('+asyncpg', '+psycopg')
+        elif database_url.startswith('postgresql://'):
+            database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
 
     return database_url
 
