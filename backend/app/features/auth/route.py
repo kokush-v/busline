@@ -23,7 +23,7 @@ async def sign_up(
     Register a new user in Cognito.
     Returns user_id (Cognito sub) which should be stored for later user creation in database.
     """
-    result = cognito.sign_up(
+    result = await cognito.sign_up(
         payload.email,
         payload.password,
         user_attributes={'name': payload.name, 'phone_number': payload.phone_number},
@@ -43,7 +43,7 @@ async def confirm_sign_up(
     Confirm user registration with code from email.
     User creation in database is handled by Cognito Post Confirmation Lambda trigger.
     """
-    cognito.confirm_sign_up(payload.email, payload.code)
+    await cognito.confirm_sign_up(payload.email, payload.code)
     return AuthResponse(code=AuthCode.CONFIRM_SUCCESS)
 
 
@@ -56,7 +56,7 @@ async def login(
     Authenticate user with email and password.
     Returns access and refresh tokens.
     """
-    auth_result = cognito.login(payload.email, payload.password)
+    auth_result = await cognito.login(payload.email, payload.password)
     return TokenResponse(
         access_token=auth_result['AccessToken'],
         refresh_token=auth_result['RefreshToken'],
@@ -73,7 +73,7 @@ async def refresh_tokens(
     Refresh access token using refresh token.
     Returns new access token.
     """
-    auth_result = cognito.refresh_tokens(payload.refresh_token)
+    auth_result = await cognito.refresh_tokens(payload.refresh_token)
     return TokenResponse(
         access_token=auth_result['AccessToken'],
         refresh_token=payload.refresh_token,

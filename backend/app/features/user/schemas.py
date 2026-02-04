@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from pydantic import BaseModel, EmailStr, Field
 
 from app.common.schemas import EntityModel, PaginatedResponse, QueryParams
@@ -20,12 +18,12 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    id: UUID  # Cognito sub
     role: UserRoleGroups = Field(default=UserRoleGroups.USER)
 
 
 class UserUpdate(BaseModel):
     name: str | None = Field(None, max_length=255)
+    phone_number: str | None = Field(None, max_length=255)
     role: UserRoleGroups | None = None
     is_active: bool | None = None
 

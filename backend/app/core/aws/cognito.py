@@ -4,7 +4,7 @@ import logging
 import time
 from typing import Any
 
-import boto3
+import aioboto3
 from botocore.exceptions import ClientError
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -34,7 +34,11 @@ class CognitoService:
         self.user_pool_id = self._settings.COGNITO_USER_POOL_ID
         self.client_id = self._settings.COGNITO_CLIENT_ID
 
-        self.client = boto3.client('cognito-idp', region_name=self.region)
+        self._session = aioboto3.Session(
+            aws_access_key_id=self._settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=self._settings.AWS_SECRET_ACCESS_KEY,
+            region_name=self.region,
+        )
 
         self.jwks_url = f'https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}/.well-known/jwks.json'
         self._jwks: list[dict[str, Any]] | None = None
@@ -52,7 +56,7 @@ class CognitoService:
                 self._jwks_expire_at = now + self.JWKS_TTL
         return self._jwks
 
-    def sign_up(self, email: str, password: str, user_attributes: dict[str, str] | None = None):
+    async def sign_up(self, email: str, password: str, user_attributes: dict[str, str] | None = None):
         """Register a new user and return UserSub."""
         try:
             logger.info(f'Sign up request - email: {email}, user_attributes: {user_attributes}')
@@ -75,7 +79,8 @@ class CognitoService:
 
             kwargs['UserAttributes'] = attributes
 
-            return self.client.sign_up(**kwargs)
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                return await client.sign_up(**kwargs)
         except ClientError as e:
             error_code = e.response['Error']['Code']
             raise ServerException(
@@ -84,12 +89,13 @@ class CognitoService:
                 details={'error_code': error_code, 'email': email},
             ) from e
 
-    def confirm_sign_up(self, email: str, code: str):
+    async def confirm_sign_up(self, email: str, code: str):
         """Confirm registration with code from email."""
         try:
             kwargs = {'ClientId': self.client_id, 'Username': email, 'ConfirmationCode': code}
 
-            return self.client.confirm_sign_up(**kwargs)
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                return await client.confirm_sign_up(**kwargs)
         except ClientError as e:
             error_code = e.response['Error']['Code']
             raise ServerException(
@@ -98,14 +104,15 @@ class CognitoService:
                 details={'error_code': error_code, 'email': email},
             ) from e
 
-    def login(self, email: str, password: str):
+    async def login(self, email: str, password: str):
         """Authenticate user and return tokens."""
         try:
             auth_params = {'USERNAME': email, 'PASSWORD': password}
 
-            response = self.client.initiate_auth(
-                ClientId=self.client_id, AuthFlow='USER_PASSWORD_AUTH', AuthParameters=auth_params
-            )
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                response = await client.initiate_auth(
+                    ClientId=self.client_id, AuthFlow='USER_PASSWORD_AUTH', AuthParameters=auth_params
+                )
             return response['AuthenticationResult']
         except ClientError as e:
             error_code = e.response['Error']['Code']
@@ -115,14 +122,15 @@ class CognitoService:
                 details={'error_code': error_code, 'email': email},
             ) from e
 
-    def refresh_tokens(self, refresh_token: str):
+    async def refresh_tokens(self, refresh_token: str):
         """Get new access token using refresh token."""
         try:
             auth_params = {'REFRESH_TOKEN': refresh_token}
 
-            response = self.client.initiate_auth(
-                ClientId=self.client_id, AuthFlow='REFRESH_TOKEN_AUTH', AuthParameters=auth_params
-            )
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                response = await client.initiate_auth(
+                    ClientId=self.client_id, AuthFlow='REFRESH_TOKEN_AUTH', AuthParameters=auth_params
+                )
             return response['AuthenticationResult']
         except ClientError as e:
             error_code = e.response['Error']['Code']
@@ -159,6 +167,156 @@ class CognitoService:
             return CognitoUser.model_validate(payload)
         except (JWTError, StopIteration, KeyError):
             return None
+
+    async def admin_create_user(self, email: str, user_attributes: dict[str, str] | None = None):
+        """Admin API to create a user with temporary password (used when user is created in DB)."""
+        try:
+            logger.info(f'Admin create user - email: {email}, user_attributes: {user_attributes}')
+
+            attributes = [{'Name': 'email', 'Value': email}, {'Name': 'email_verified', 'Value': 'true'}]
+
+            if user_attributes:
+                if user_attributes.get('name'):
+                    attributes.append({'Name': 'name', 'Value': user_attributes['name']})
+                if user_attributes.get('phone_number'):
+                    attributes.append({'Name': 'phone_number', 'Value': user_attributes['phone_number']})
+
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                return await client.admin_create_user(
+                    UserPoolId=self.user_pool_id,
+                    Username=email,
+                    UserAttributes=attributes,
+                    MessageAction='SUPPRESS',  # Don't send welcome message
+                )
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code, 'email': email},
+            ) from e
+
+    async def admin_update_user_attributes(self, email: str, user_attributes: dict[str, str]):
+        """Update user attributes in Cognito."""
+        try:
+            logger.info(f'Admin update user attributes - email: {email}, attributes: {user_attributes}')
+
+            attributes = []
+            if user_attributes.get('name'):
+                attributes.append({'Name': 'name', 'Value': user_attributes['name']})
+            if user_attributes.get('phone_number'):
+                attributes.append({'Name': 'phone_number', 'Value': user_attributes['phone_number']})
+
+            if attributes:
+                async with self._session.client('cognito-idp', region_name=self.region) as client:
+                    await client.admin_update_user_attributes(
+                        UserPoolId=self.user_pool_id,
+                        Username=email,
+                        UserAttributes=attributes,
+                    )
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code, 'email': email},
+            ) from e
+
+    async def admin_delete_user(self, email: str):
+        """Delete user from Cognito."""
+        try:
+            logger.info(f'Admin delete user - email: {email}')
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                await client.admin_delete_user(UserPoolId=self.user_pool_id, Username=email)
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code, 'email': email},
+            ) from e
+
+    async def admin_disable_user(self, email: str):
+        """Disable user in Cognito (user cannot sign in)."""
+        try:
+            logger.info(f'Admin disable user - email: {email}')
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                await client.admin_disable_user(UserPoolId=self.user_pool_id, Username=email)
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code, 'email': email},
+            ) from e
+
+    async def admin_enable_user(self, email: str):
+        """Enable user in Cognito."""
+        try:
+            logger.info(f'Admin enable user - email: {email}')
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                await client.admin_enable_user(UserPoolId=self.user_pool_id, Username=email)
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code, 'email': email},
+            ) from e
+
+    async def admin_add_user_to_group(self, email: str, group_name: str):
+        """Add user to a Cognito group."""
+        try:
+            logger.info(f'Admin add user to group - email: {email}, group: {group_name}')
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                await client.admin_add_user_to_group(
+                    UserPoolId=self.user_pool_id,
+                    Username=email,
+                    GroupName=group_name,
+                )
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code, 'email': email, 'group': group_name},
+            ) from e
+
+    async def admin_remove_user_from_group(self, email: str, group_name: str):
+        """Remove user from a Cognito group."""
+        try:
+            logger.info(f'Admin remove user from group - email: {email}, group: {group_name}')
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                await client.admin_remove_user_from_group(
+                    UserPoolId=self.user_pool_id,
+                    Username=email,
+                    GroupName=group_name,
+                )
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code, 'email': email, 'group': group_name},
+            ) from e
+
+    async def admin_list_groups_for_user(self, email: str) -> list[str]:
+        """Get list of groups for a user."""
+        try:
+            logger.info(f'Admin list groups for user - email: {email}')
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                response = await client.admin_list_groups_for_user(
+                    UserPoolId=self.user_pool_id,
+                    Username=email,
+                )
+            return [group['GroupName'] for group in response.get('Groups', [])]
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code, 'email': email},
+            ) from e
 
     def roles_required(self, allowed_groups: list[str]) -> Callable[..., Coroutine[Any, Any, CognitoUser]]:
         """Dependency for verifying user roles (Cognito Groups)."""
