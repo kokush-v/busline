@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from functools import lru_cache
 import logging
+import time
 from typing import Any
 
 import boto3
@@ -24,6 +25,8 @@ security = HTTPBearer(
 class CognitoService:
     """Service for handling AWS Cognito operations."""
 
+    JWKS_TTL = 3600  # Cache JWKS for 1 hour
+
     def __init__(self):
         self._settings = get_env_settings()
         self.region = self._settings.AWS_REGION
@@ -34,14 +37,18 @@ class CognitoService:
 
         self.jwks_url = f'https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}/.well-known/jwks.json'
         self._jwks: list[dict[str, Any]] | None = None
+        self._jwks_expire_at: float = 0
 
     async def _get_jwks(self) -> list[dict[str, Any]]:
-        """Get JWKS keys from Cognito, cached after first retrieval."""
-        if not self._jwks:
+        """Get JWKS keys from Cognito with TTL caching."""
+        now = time.time()
+
+        if not self._jwks or now > self._jwks_expire_at:
             async with httpx.AsyncClient() as client:
                 response = await client.get(self.jwks_url)
                 response.raise_for_status()
                 self._jwks = response.json()['keys']
+                self._jwks_expire_at = now + self.JWKS_TTL
         return self._jwks
 
     def sign_up(self, email: str, password: str, user_attributes: dict[str, str] | None = None):
@@ -132,7 +139,14 @@ class CognitoService:
             key = next((k for k in jwks if k['kid'] == header['kid']), None)
 
             if not key:
-                return None
+                logger.warning(f'Key {header.get("kid")} not found in JWKS, refreshing cache')
+                self._jwks = None
+                self._jwks_expire_at = 0
+                jwks = await self._get_jwks()
+                key = next((k for k in jwks if k['kid'] == header['kid']), None)
+
+                if not key:
+                    return None
 
             payload = jwt.decode(
                 token,
