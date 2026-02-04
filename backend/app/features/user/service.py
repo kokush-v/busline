@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import Depends
 from sqlalchemy import asc, delete, desc, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from app.common.enums import SortOrder
 from app.database.db import get_db_session
@@ -19,25 +20,41 @@ class UserService:
     async def get_users(self, params: UserQueryParams) -> tuple[list[User], int]:
         """Get users with filtering, sorting, and pagination."""
         query = select(User)
+        query = self.__apply_search_filter(query, params)
+        query = self.__apply_role_filter(query, params)
+        query = self.__apply_active_filter(query, params)
 
-        # Search by email or name
+        total = await self.__get_total_count(query)
+
+        query = self.__apply_sorting(query, params)
+        query = self.__apply_pagination(query, params)
+
+        result = await self._session.execute(query)
+        users = list(result.scalars().all())
+
+        return users, total
+
+    def __apply_search_filter(self, query: Select, params: UserQueryParams) -> Select:
         if params.search:
             query = query.where((User.email.ilike(f'%{params.search}%')) | (User.name.ilike(f'%{params.search}%')))
+        return query
 
-        # Filter by role
+    def __apply_role_filter(self, query: Select, params: UserQueryParams) -> Select:
         if params.role:
             query = query.where(User.role == params.role)
+        return query
 
-        # Filter by active status
+    def __apply_active_filter(self, query: Select, params: UserQueryParams) -> Select:
         if params.is_active is not None:
             query = query.where(User.is_active == params.is_active)
+        return query
 
-        # Count total items
+    async def __get_total_count(self, query: Select) -> int:
         count_query = select(func.count()).select_from(query.subquery())
         total_result = await self._session.execute(count_query)
-        total = total_result.scalar_one()
+        return total_result.scalar_one()
 
-        # Sorting
+    def __apply_sorting(self, query: Select, params: UserQueryParams) -> Select:
         match params.sort_by:
             case UserSortBy.EMAIL:
                 sort_column = User.email
@@ -50,17 +67,12 @@ class UserService:
 
         match params.sort_order:
             case SortOrder.DESC:
-                query = query.order_by(desc(sort_column))
+                return query.order_by(desc(sort_column))
             case _:
-                query = query.order_by(asc(sort_column))
+                return query.order_by(asc(sort_column))
 
-        # Pagination
-        query = query.limit(params.limit).offset(params.offset)
-
-        result = await self._session.execute(query)
-        users = list(result.scalars().all())
-
-        return users, total
+    def __apply_pagination(self, query: Select, params: UserQueryParams) -> Select:
+        return query.limit(params.limit).offset(params.offset)
 
     async def get_user(self, user_id: UUID) -> User:
         result = await self._session.execute(select(User).where(User.id == user_id))
@@ -77,7 +89,7 @@ class UserService:
         existing_user = result.scalars().one_or_none()
 
         if existing_user:
-            result.scalar_one()  # This will raise an error if user exists
+            result.scalar_one()
 
         stmt = insert(User).values(**payload.model_dump()).returning(User)
         result = await self._session.execute(stmt)

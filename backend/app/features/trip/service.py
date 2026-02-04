@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import Depends
 from sqlalchemy import and_, asc, delete, desc, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from app.common.enums import SortOrder
 from app.database.db import get_db_session
@@ -32,7 +33,7 @@ class TripService:
         self._stop_service = stop_service
         self._seat_service = seat_service
 
-    def __apply_from_stop_filter(self, query, params: TripQueryParams):
+    def __apply_from_stop_filter(self, query: Select, params: TripQueryParams) -> Select:
         if not params.from_stop_id:
             return query
 
@@ -65,26 +66,26 @@ class TripService:
 
         return query
 
-    def __apply_to_stop_filter(self, query, params: TripQueryParams):
+    def __apply_to_stop_filter(self, query: Select, params: TripQueryParams) -> Select:
         if not params.to_stop_id:
             return query
 
         to_stop_subq = select(TripStop.trip_id).where(TripStop.stop_id == params.to_stop_id).subquery()
         return query.where(Trip.id.in_(select(to_stop_subq)))
 
-    def __apply_price_filters(self, query, params: TripQueryParams):
+    def __apply_price_filters(self, query: Select, params: TripQueryParams) -> Select:
         if params.min_price is not None:
             query = query.where(Trip.price_per_seat >= params.min_price)
         if params.max_price is not None:
             query = query.where(Trip.price_per_seat <= params.max_price)
         return query
 
-    def __apply_seats_filter(self, query, params: TripQueryParams):
+    def __apply_seats_filter(self, query: Select, params: TripQueryParams) -> Select:
         if params.available_seats_min is not None:
             query = query.where(Trip.seats_left >= params.available_seats_min)
         return query
 
-    def __apply_sorting(self, query, params: TripQueryParams):
+    def __apply_sorting(self, query: Select, params: TripQueryParams) -> Select:
         match params.sort_by:
             case TripSortBy.DEPARTURE_TIME:
                 query = query.join(TripStop, Trip.id == TripStop.trip_id).where(TripStop.position_index == 1)
@@ -106,10 +107,10 @@ class TripService:
 
         return query
 
-    def __apply_pagination(self, query, params: TripQueryParams):
+    def __apply_pagination(self, query: Select, params: TripQueryParams) -> Select:
         return query.limit(params.limit).offset(params.offset)
 
-    async def __get_total_count(self, query) -> int:
+    async def __get_total_count(self, query: Select) -> int:
         count_query = select(func.count()).select_from(query.subquery())
         total_result = await self._session.execute(count_query)
         return total_result.scalar_one()

@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 
 from app.core.aws.cognito import get_cognito_service
+from app.features.auth.schemas import CognitoUser
 from app.features.order.schemas import OrderRead
 from app.features.order.service import OrderService
 from app.features.ticket.schemas import TicketRead
@@ -50,3 +51,11 @@ async def get_order_tickets(
 ):
     """Get all tickets for a specific order."""
     return await service.get_order_tickets(order_id)
+
+
+@router.get('/')
+async def get_user_orders(
+    service: OrderService = Depends(),
+    user: CognitoUser = Depends(cognito_service.roles_required([UserRoleGroups.USER])),
+):
+    return await service.get_user_orders(user_id=user.sub)

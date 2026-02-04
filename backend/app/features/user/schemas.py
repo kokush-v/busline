@@ -1,18 +1,9 @@
-from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
 from app.common.schemas import EntityModel, PaginatedResponse, QueryParams
-from app.features.user.enums import UserRoleGroups
-
-
-class UserSortBy(StrEnum):
-    """User sorting options."""
-
-    EMAIL = 'email'
-    NAME = 'name'
-    CREATED_AT = 'created_at'
+from app.features.user.enums import UserRoleGroups, UserSortBy
 
 
 class UserQueryParams(QueryParams):

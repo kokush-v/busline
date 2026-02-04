@@ -3,13 +3,14 @@ from uuid import UUID
 from fastapi import Depends
 from sqlalchemy import asc, delete, desc, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
+from app.common.enums import SortOrder
 from app.core.exeptions import ServerException
 from app.database.db import get_db_session
 from app.features.city.enums import CitySortBy
 from app.features.city.models import City
 from app.features.city.schemas import CityCreate, CityQueryParams, CityUpdate
-from app.features.trip.enums import SortOrder
 from app.utils.decorators import transactional
 
 
@@ -19,13 +20,13 @@ class CityService:
     def __init__(self, session: AsyncSession = Depends(get_db_session)):
         self._session = session
 
-    def __apply_search_filter(self, query, params: CityQueryParams):
+    def __apply_search_filter(self, query: Select, params: CityQueryParams) -> Select:
         if not params.search:
             return query
 
         return query.where(City.name.ilike(f'%{params.search}%'))
 
-    def __apply_sorting(self, query, params: CityQueryParams):
+    def __apply_sorting(self, query: Select, params: CityQueryParams) -> Select:
         match params.sort_by:
             case CitySortBy.NAME:
                 sort_column = City.name
@@ -42,10 +43,10 @@ class CityService:
 
         return query
 
-    def __apply_pagination(self, query, params: CityQueryParams):
+    def __apply_pagination(self, query: Select, params: CityQueryParams) -> Select:
         return query.limit(params.limit).offset(params.offset)
 
-    async def __get_total_count(self, query) -> int:
+    async def __get_total_count(self, query: Select) -> int:
         count_query = select(func.count()).select_from(query.subquery())
         total_result = await self._session.execute(count_query)
         return total_result.scalar_one()

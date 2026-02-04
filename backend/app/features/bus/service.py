@@ -4,7 +4,9 @@ from fastapi import Depends, UploadFile
 import httpx
 from sqlalchemy import asc, delete, desc, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
+from app.common.enums import SortOrder
 from app.core.aws.s3_service import S3Service, get_s3_service
 from app.core.exeptions import ServerException
 from app.database.db import get_db_session
@@ -18,7 +20,6 @@ from app.features.bus.schemas import (
     PresignedUrlResponse,
     TestUploadRequest,
 )
-from app.features.trip.enums import SortOrder
 from app.settings.env import get_env_settings
 
 
@@ -34,7 +35,7 @@ class BusService:
         self._settings = get_env_settings()
         self._s3_service = s3_service
 
-    def __apply_search_filter(self, query, params: BusQueryParams):
+    def __apply_search_filter(self, query: Select, params: BusQueryParams) -> Select:
         if not params.search:
             return query
 
@@ -45,14 +46,14 @@ class BusService:
             )
         )
 
-    def __apply_seats_filters(self, query, params: BusQueryParams):
+    def __apply_seats_filters(self, query: Select, params: BusQueryParams) -> Select:
         if params.min_seats is not None:
             query = query.where(Bus.seats_quantity >= params.min_seats)
         if params.max_seats is not None:
             query = query.where(Bus.seats_quantity <= params.max_seats)
         return query
 
-    def __apply_photo_filter(self, query, params: BusQueryParams):
+    def __apply_photo_filter(self, query: Select, params: BusQueryParams) -> Select:
         if params.has_photo is None:
             return query
 
@@ -62,7 +63,7 @@ class BusService:
             query = query.where(Bus.photo_url.is_(None))
         return query
 
-    def __apply_sorting(self, query, params: BusQueryParams):
+    def __apply_sorting(self, query: Select, params: BusQueryParams) -> Select:
         match params.sort_by:
             case BusSortBy.NUMBER_PLATE:
                 sort_column = Bus.number_plate
@@ -83,10 +84,10 @@ class BusService:
 
         return query
 
-    def __apply_pagination(self, query, params: BusQueryParams):
+    def __apply_pagination(self, query: Select, params: BusQueryParams) -> Select:
         return query.limit(params.limit).offset(params.offset)
 
-    async def __get_total_count(self, query) -> int:
+    async def __get_total_count(self, query: Select) -> int:
         count_query = select(func.count()).select_from(query.subquery())
         total_result = await self._session.execute(count_query)
         return total_result.scalar_one()

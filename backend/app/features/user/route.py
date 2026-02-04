@@ -35,7 +35,6 @@ async def get_users(
 
 @router.get('/{user_id}', response_model=UserRead)
 async def get_user(user_id: UUID, service: UserService = Depends()):
-    """Get a specific user by ID."""
     return await service.get_user(user_id)
 
 
@@ -56,7 +55,6 @@ async def update_user(
     service: UserService = Depends(),
     _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
 ):
-    """Update user information. Admin only."""
     return await service.update_user(user_id, payload)
 
 
@@ -66,7 +64,6 @@ async def delete_user(
     service: UserService = Depends(),
     _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
 ):
-    """Delete a user. Admin only."""
     await service.delete_user(user_id)
 
 
@@ -76,7 +73,6 @@ async def deactivate_user(
     service: UserService = Depends(),
     _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
 ):
-    """Deactivate a user (soft delete). Admin only."""
     return await service.deactivate_user(user_id)
 
 
@@ -86,5 +82,4 @@ async def activate_user(
     service: UserService = Depends(),
     _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
 ):
-    """Activate a user. Admin only."""
     return await service.activate_user(user_id)

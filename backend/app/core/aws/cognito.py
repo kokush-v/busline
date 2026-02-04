@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from functools import lru_cache
 import logging
 import time
@@ -12,6 +12,7 @@ import httpx
 from jose import JWTError, jwt
 
 from app.core.exeptions import ServerException
+from app.features.auth.schemas import CognitoUser
 from app.settings.env import get_env_settings
 
 logger = logging.getLogger(__name__)
@@ -131,7 +132,7 @@ class CognitoService:
                 details={'error_code': error_code},
             ) from e
 
-    async def verify_token(self, token: str) -> dict[str, Any] | None:
+    async def verify_token(self, token: str) -> CognitoUser | None:
         """Validate JWT and return payload."""
         try:
             jwks = await self._get_jwks()
@@ -155,14 +156,14 @@ class CognitoService:
                 audience=self.client_id,
                 issuer=f'https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}',
             )
-            return payload
+            return CognitoUser.model_validate(payload)
         except (JWTError, StopIteration, KeyError):
             return None
 
-    def roles_required(self, allowed_groups: list[str]) -> Callable:
+    def roles_required(self, allowed_groups: list[str]) -> Callable[..., Coroutine[Any, Any, CognitoUser]]:
         """Dependency for verifying user roles (Cognito Groups)."""
 
-        async def dependency(auth: HTTPAuthorizationCredentials = Depends(security)) -> dict[str, Any]:
+        async def dependency(auth: HTTPAuthorizationCredentials = Depends(security)) -> CognitoUser:
             token = auth.credentials
 
             payload = await self.verify_token(token)
@@ -172,7 +173,7 @@ class CognitoService:
                     status=401,
                 )
 
-            user_groups = payload.get('cognito:groups', [])
+            user_groups = payload.cognito_groups
             if not any(group in allowed_groups for group in user_groups):
                 raise ServerException(
                     message='Access denied',

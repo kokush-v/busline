@@ -53,10 +53,9 @@ class Order(Base):
         onupdate=func.now(),
     )
 
-    user: Mapped['User'] = relationship('User', back_populates='orders', lazy='selectin')
+    user: Mapped['User'] = relationship('User', back_populates='orders')
     tickets: Mapped[list['Ticket']] = relationship(
         'Ticket',
         back_populates='order',
         cascade='all, delete-orphan',
-        lazy='selectin',
     )

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.core.aws.cognito import CognitoService, get_cognito_service
 from app.features.auth.schemas import (
+    AuthCode,
     AuthResponse,
     ConfirmSignUpRequest,
     LoginRequest,
@@ -28,7 +29,7 @@ async def sign_up(
         user_attributes={'name': payload.name, 'phone_number': payload.phone_number},
     )
     return AuthResponse(
-        message='User registered successfully. Check your email for confirmation code.',
+        code=AuthCode.SIGN_UP_SUCCESS,
         user_id=result['UserSub'],
     )
 
@@ -43,7 +44,7 @@ async def confirm_sign_up(
     User creation in database is handled by Cognito Post Confirmation Lambda trigger.
     """
     cognito.confirm_sign_up(payload.email, payload.code)
-    return AuthResponse(message='Email confirmed successfully. You can now login.')
+    return AuthResponse(code=AuthCode.CONFIRM_SUCCESS)
 
 
 @router.post('/login', response_model=TokenResponse)

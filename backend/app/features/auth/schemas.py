@@ -2,10 +2,28 @@ import re
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.features.auth.enums import AuthCode
+
+
+class CognitoUser(BaseModel):
+    """JWT payload from Cognito token."""
+
+    sub: str
+    email: str | None = None
+    name: str | None = None
+    phone_number: str | None = None
+    cognito_groups: list[str] = Field(default_factory=list, alias='cognito:groups')
+    iat: int
+    exp: int
+    aud: str | None = None
+    iss: str | None = None
+
+    class Config:
+        extra = 'allow'
+        populate_by_name = True
+
 
 class SignUpRequest(BaseModel):
-    """Request schema for user registration."""
-
     email: EmailStr
     password: str = Field(
         ...,
@@ -33,28 +51,20 @@ class SignUpRequest(BaseModel):
 
 
 class ConfirmSignUpRequest(BaseModel):
-    """Request schema for confirming registration."""
-
     email: EmailStr
     code: str = Field(..., min_length=6, max_length=6, description='6-digit confirmation code')
 
 
 class LoginRequest(BaseModel):
-    """Request schema for user login."""
-
     email: EmailStr
     password: str
 
 
 class RefreshTokenRequest(BaseModel):
-    """Request schema for token refresh."""
-
     refresh_token: str
 
 
 class TokenResponse(BaseModel):
-    """Response schema with authentication tokens."""
-
     access_token: str
     refresh_token: str
     token_type: str = 'bearer'
@@ -62,7 +72,5 @@ class TokenResponse(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    """Generic authentication response."""
-
-    message: str
+    code: AuthCode
     user_id: str | None = None
