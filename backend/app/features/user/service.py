@@ -191,29 +191,19 @@ class UserService:
 
         return updated_user
 
-    async def __delete_user_from_cognito(self, email: str) -> None:
-        """Delete user from Cognito."""
-        await self._cognito.admin_delete_user(email)
-
     @transactional
     async def delete_user(self, user_id: UUID) -> None:
         user = await self.get_user(user_id)
 
-        await self.__delete_user_from_cognito(user.email)
+        await self._cognito.admin_delete_user(user.email)
 
         stmt = delete(User).where(User.id == user_id)
         await self._session.execute(stmt)
 
-    async def __disable_user_in_cognito(self, email: str) -> None:
-        await self._cognito.admin_disable_user(email)
-
-    async def __enable_user_in_cognito(self, email: str) -> None:
-        await self._cognito.admin_enable_user(email)
-
     async def deactivate_user(self, user_id: UUID) -> User:
         user = await self.get_user(user_id)
 
-        await self.__disable_user_in_cognito(user.email)
+        await self._cognito.admin_disable_user(user.email)
         user = await self.update_user(user_id, UserUpdate(is_active=False))
 
         return user
@@ -221,7 +211,7 @@ class UserService:
     async def activate_user(self, user_id: UUID) -> User:
         user = await self.get_user(user_id)
 
-        await self.__enable_user_in_cognito(user.email)
+        await self._cognito.admin_enable_user(user.email)
         user = await self.update_user(user_id, UserUpdate(is_active=True))
 
         return user
