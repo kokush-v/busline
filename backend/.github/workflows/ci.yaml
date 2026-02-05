@@ -32,7 +32,7 @@ jobs:
    deploy:
       needs: quality-assurance
       runs-on: ubuntu-latest
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ci-cd-configuration'
       steps:
          - name: Deploy to EC2 via SSH
            uses: appleboy/ssh-action@v1.0.3
