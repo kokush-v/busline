@@ -1,6 +1,6 @@
 import re
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.features.auth.enums import AuthCode
 
@@ -18,9 +18,7 @@ class CognitoUser(BaseModel):
     aud: str | None = None
     iss: str | None = None
 
-    class Config:
-        extra = 'allow'
-        populate_by_name = True
+    model_config = ConfigDict(extra='allow', populate_by_name=True)
 
 
 class SignUpRequest(BaseModel):
