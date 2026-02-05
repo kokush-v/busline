@@ -3,8 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.common.schemas import EntityModel
-from app.features.trip.enums import SortOrder, TripSortBy
+from app.common.schemas import EntityModel, PaginatedResponse, QueryParams
+from app.features.trip.enums import TripSortBy
 from app.features.trip_stop.schemas import TripStopCreate, TripStopRead
 
 
@@ -92,9 +92,10 @@ class TripReadPublic(BaseModel):
     created_at: datetime
 
 
-class TripQueryParams(BaseModel):
+class TripQueryParams(QueryParams):
     """Query parameters for filtering and sorting trips."""
 
+    sort_by: TripSortBy = Field(TripSortBy.DEPARTURE_TIME, description='Sort by field')
     from_stop_id: UUID | None = Field(None, description='Filter by departure stop')
     to_stop_id: UUID | None = Field(None, description='Filter by arrival stop')
     departure_date_from: datetime | None = Field(None, description='Filter by minimum departure date')
@@ -103,17 +104,8 @@ class TripQueryParams(BaseModel):
     max_price: float | None = Field(None, ge=0, description='Filter by maximum price per seat')
     available_seats_min: int | None = Field(None, ge=0, description='Filter by minimum available seats')
 
-    limit: int = Field(20, ge=1, le=100, description='Number of items per page')
-    offset: int = Field(0, ge=0, description='Number of items to skip')
 
-    sort_by: TripSortBy = Field(TripSortBy.DEPARTURE_TIME, description='Sort by field')
-    sort_order: SortOrder = Field(SortOrder.ASC, description='Sort order')
-
-
-class TripListResponse(BaseModel):
+class TripListResponse(PaginatedResponse[TripReadPublic]):
     """Response model for paginated trips list."""
 
-    items: list[TripReadPublic]
-    total: int
-    limit: int
-    offset: int
+    pass

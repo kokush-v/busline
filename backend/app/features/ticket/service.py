@@ -5,9 +5,9 @@ from fastapi import Depends
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.aws.lambda_service import LambdaService, get_lambda_service
+from app.core.aws.s3_service import S3Service, get_s3_service
 from app.core.exeptions import ServerException
-from app.core.lambda_service import LambdaService, get_lambda_service
-from app.core.s3_service import S3Service, get_s3_service
 from app.database.db import get_db_session
 from app.features.ticket.enums import PdfStatus
 from app.features.ticket.models import Ticket
