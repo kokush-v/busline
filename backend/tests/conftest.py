@@ -1,7 +1,10 @@
 from collections.abc import AsyncGenerator, Generator
 import os
 import pathlib
+import time
 from typing import Any
+from unittest.mock import patch
+from uuid import UUID
 
 from alembic.command import downgrade, upgrade
 from alembic.config import Config as AlembicConfig
@@ -10,9 +13,12 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from moto import mock_aws
 import pytest
+from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
+from app.features.auth.schemas import CognitoUser
+from app.features.user.enums import UserRoleGroups
 from app.settings.env import get_env_settings
 from tests.dependencies import override_app_test_dependencies, override_dependency
 
@@ -22,6 +28,38 @@ TEST_HOST = 'http://test'
 TEST_AWS_REGION = 'us-east-1'
 TEST_S3_PHOTOS_BUCKET = 'test-photos-bucket'
 TEST_S3_THUMBNAILS_BUCKET = 'test-thumbnails-bucket'
+
+# Test user ID (valid UUID)
+TEST_USER_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+
+# Test user for mocked authentication
+TEST_COGNITO_USER = CognitoUser(
+    sub=TEST_USER_ID,
+    email='test@example.com',
+    name='Test User',
+    phone_number='+380123456789',
+    cognito_groups=[UserRoleGroups.ADMIN, UserRoleGroups.USER],
+    iat=int(time.time()),
+    exp=int(time.time()) + 3600,
+    aud='test-client-id',
+    iss='https://cognito-idp.us-east-1.amazonaws.com/test-pool-id',
+)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def _mock_cognito_auth():
+    """Mock Cognito authentication for all tests."""
+
+    async def mock_verify_token(self, token: str) -> CognitoUser:
+        return TEST_COGNITO_USER
+
+    with patch('app.core.aws.cognito.CognitoService.verify_token', mock_verify_token):
+        # Clear the cached cognito service so it picks up the mock
+        from app.core.aws.cognito import get_cognito_service
+
+        get_cognito_service.cache_clear()
+        yield
+        get_cognito_service.cache_clear()
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -51,7 +89,9 @@ async def app() -> AsyncGenerator[FastAPI, Any]:
 
 @pytest.fixture(scope='session')
 async def client(app: FastAPI) -> AsyncGenerator[AsyncClient, Any]:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=TEST_HOST) as client:
+    # Include Authorization header for endpoints that require authentication
+    headers = {'Authorization': 'Bearer test-token'}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=TEST_HOST, headers=headers) as client:
         yield client
 
 
@@ -64,8 +104,20 @@ async def session(app: FastAPI, _engine: AsyncEngine) -> AsyncGenerator[AsyncSes
     session = session_factory()
 
     from app.database.db import get_db_session
+    from app.features.user.models import User
 
     override_dependency(app, get_db_session, lambda: session)
+
+    # Create test user for authentication
+    await session.execute(
+        insert(User).values(
+            id=UUID(TEST_USER_ID),
+            email=TEST_COGNITO_USER.email,
+            name=TEST_COGNITO_USER.name,
+            role=UserRoleGroups.ADMIN,
+        )
+    )
+    await session.flush()
 
     try:
         yield session

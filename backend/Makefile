@@ -1,10 +1,11 @@
-.PHONY: help install run dev test lint format clean migrations migrate downgrade open-db-conn connect-ec2
+.PHONY: help install install-docker run dev test lint format clean migrations migrate downgrade open-db-conn connect-ec2
 
 help:
 	@echo "🚀 Busline Backend Commands"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make install          - Install project dependencies"
+	@echo "  make install-docker   - Install dependencies without root package (for Docker)"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev              - Run development server"
@@ -32,6 +33,10 @@ help:
 
 install:
 	@echo "📦 Installing dependencies..."
+	poetry install
+
+install-docker:
+	@echo "📦 Installing dependencies (no-root)..."
 	poetry install --no-root
 
 dev:

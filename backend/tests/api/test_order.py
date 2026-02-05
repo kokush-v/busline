@@ -1,28 +1,29 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from httpx import AsyncClient
 from pydantic import TypeAdapter
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.order.enums import OrderStatus
-from app.features.seat.enums import SeatStatus
 from app.features.bus.schemas import BusRead
 from app.features.bus.service import BusService
 from app.features.city.schemas import CityRead
 from app.features.city.service import CityService
+from app.features.order.enums import OrderStatus
 from app.features.order.models import Order
 from app.features.order.schemas import OrderRead
+from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.seat.schemas import SeatRead
+from app.features.seat.service import SeatService
 from app.features.stop.schemas import StopRead
 from app.features.stop.service import StopService
 from app.features.ticket.schemas import TicketRead
-from app.features.seat.service import SeatService
 from app.features.trip.schemas import TripRead
 from app.features.trip_stop.schemas import TripStopCreate
+from tests.conftest import TEST_USER_ID
 from tests.factories import (
     BusCreateFactory,
     CityCreateFactory,
@@ -62,9 +63,7 @@ async def create_test_trip(
     bus = bus_result.scalar_one()
 
     trip_stmt = (
-        insert(Trip)
-        .values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity)
-        .returning(Trip)
+        insert(Trip).values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity).returning(Trip)
     )
     trip_result = await session.execute(trip_stmt)
     trip = trip_result.scalar_one()
@@ -238,6 +237,7 @@ class TestOrderTickets:
             'status': OrderStatus.PENDING,
             'total_price': Decimal('0.00'),
             'expires_at': datetime.now(UTC) + timedelta(minutes=30),
+            'user_id': UUID(TEST_USER_ID),
         }
         result = await session.execute(insert(Order).values(**order_data).returning(Order))
         order = result.scalar_one()

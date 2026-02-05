@@ -207,7 +207,7 @@ class TestTripsCreate:
 
 class TestTripsList:
     async def test_list_empty(self, session: AsyncSession, client: AsyncClient):
-        response = await client.get('/trips', params={'sort_by': 'CREATED_AT'})
+        response = await client.get('/trips', params={'sort_by': 'created_at'})
         assert response.status_code == 200
         assert response.json()['items'] == []
         assert response.json()['total'] == 0
@@ -216,7 +216,7 @@ class TestTripsList:
         bus = await create_test_bus(session)
         trip = await create_test_trip(session, bus.id)
 
-        response = await client.get('/trips', params={'sort_by': 'CREATED_AT'})
+        response = await client.get('/trips', params={'sort_by': 'created_at'})
         assert response.status_code == 200
 
         data = response.json()
