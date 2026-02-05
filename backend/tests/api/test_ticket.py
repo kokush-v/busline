@@ -5,17 +5,17 @@ from httpx import AsyncClient
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.seat.enums import SeatStatus
 from app.features.bus.schemas import BusRead
 from app.features.bus.service import BusService
 from app.features.city.schemas import CityRead
 from app.features.city.service import CityService
+from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.seat.schemas import SeatRead
+from app.features.seat.service import SeatService
 from app.features.stop.schemas import StopRead
 from app.features.stop.service import StopService
 from app.features.ticket.schemas import TicketRead
-from app.features.seat.service import SeatService
 from app.features.trip.schemas import TripRead
 from app.features.trip_stop.schemas import TripStopCreate
 from tests.factories import (
@@ -57,9 +57,7 @@ async def create_test_trip(
     bus = bus_result.scalar_one()
 
     trip_stmt = (
-        insert(Trip)
-        .values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity)
-        .returning(Trip)
+        insert(Trip).values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity).returning(Trip)
     )
     trip_result = await session.execute(trip_stmt)
     trip = trip_result.scalar_one()
