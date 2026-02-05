@@ -27,7 +27,10 @@ class Settings(BaseSettings):
     COGNITO_CLIENT_ID: str = ''
 
     # Payment
-    PAYMENT_WEBHOOK_URL: str = 'http://localhost:8000/payments/webhook'
+    PAYMENT_WEBHOOK_URL: str = ''
+
+    # SES (Email)
+    SES_SENDER_EMAIL: str = ''
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
