@@ -2,5 +2,5 @@ from enum import StrEnum
 
 
 class CitySortBy(StrEnum):
-    NAME = 'NAME'
-    CREATED_AT = 'CREATED_AT'
+    NAME = 'name'
+    CREATED_AT = 'created_at'

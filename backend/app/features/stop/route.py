@@ -2,14 +2,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.core.roles import RoleChecker, UserRole
+from app.core.aws.cognito import get_cognito_service
 from app.features.stop.schemas import StopCreate, StopListResponse, StopQueryParams, StopRead, StopUpdate
 from app.features.stop.service import StopService
+from app.features.user.enums import UserRoleGroups
 
+cognito_service = get_cognito_service()
 router = APIRouter(prefix='/stops', tags=['Stops'])
-
-# TODO: Apply admin_only dependency to appropriate routes
-admin_only = RoleChecker([UserRole.ADMIN])
 
 
 @router.get('', response_model=StopListResponse)
@@ -38,7 +37,11 @@ async def get_stop(stop_id: UUID, service: StopService = Depends()):
     response_model=StopRead,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_stop(payload: StopCreate, service: StopService = Depends()):
+async def create_stop(
+    payload: StopCreate,
+    service: StopService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     return await service.create_stop(payload)
 
 
@@ -46,7 +49,12 @@ async def create_stop(payload: StopCreate, service: StopService = Depends()):
     '/{stop_id}',
     response_model=StopRead,
 )
-async def update_stop(stop_id: UUID, payload: StopUpdate, service: StopService = Depends()):
+async def update_stop(
+    stop_id: UUID,
+    payload: StopUpdate,
+    service: StopService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     return await service.update_stop(stop_id, payload)
 
 
@@ -54,5 +62,9 @@ async def update_stop(stop_id: UUID, payload: StopUpdate, service: StopService =
     '/{stop_id}',
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def delete_stop(stop_id: UUID, service: StopService = Depends()):
+async def delete_stop(
+    stop_id: UUID,
+    service: StopService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     await service.delete_stop(stop_id)

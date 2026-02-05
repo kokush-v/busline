@@ -140,7 +140,8 @@ def _aws_mock():
         s3_client.create_bucket(Bucket=TEST_S3_THUMBNAILS_BUCKET)
 
         # Clear S3Service cache so it picks up mocked AWS
-        from app.core.s3_service import get_s3_service
+        from app.core.aws.s3_service import get_s3_service
+
         get_s3_service.cache_clear()
 
         yield

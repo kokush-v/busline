@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
-from app.core.roles import RoleChecker, UserRole
+from app.core.aws.cognito import get_cognito_service
 from app.features.bus.schemas import (
     BusCreate,
     BusListResponse,
@@ -15,11 +15,10 @@ from app.features.bus.schemas import (
     TestUploadRequest,
 )
 from app.features.bus.service import BusService
+from app.features.user.enums import UserRoleGroups
 
+cognito_service = get_cognito_service()
 router = APIRouter(prefix='/buses', tags=['Buses'])
-
-# TODO: Apply admin_only dependency to routes that require admin access
-admin_only = RoleChecker([UserRole.ADMIN])
 
 
 @router.get('', response_model=BusListResponse)
@@ -48,7 +47,11 @@ async def get_bus(bus_id: UUID, service: BusService = Depends()):
     response_model=BusRead,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_bus(payload: BusCreate, service: BusService = Depends()):
+async def create_bus(
+    payload: BusCreate,
+    service: BusService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     return await service.create_bus(payload)
 
 
@@ -56,7 +59,12 @@ async def create_bus(payload: BusCreate, service: BusService = Depends()):
     '/{bus_id}',
     response_model=BusRead,
 )
-async def update_bus(bus_id: UUID, payload: BusUpdate, service: BusService = Depends()):
+async def update_bus(
+    bus_id: UUID,
+    payload: BusUpdate,
+    service: BusService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     return await service.update_bus(bus_id, payload)
 
 
@@ -64,7 +72,11 @@ async def update_bus(bus_id: UUID, payload: BusUpdate, service: BusService = Dep
     '/{bus_id}',
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def delete_bus(bus_id: UUID, service: BusService = Depends()):
+async def delete_bus(
+    bus_id: UUID,
+    service: BusService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     await service.delete_bus(bus_id)
 
 
@@ -72,7 +84,11 @@ async def delete_bus(bus_id: UUID, service: BusService = Depends()):
     '/upload-url',
     response_model=PresignedUrlResponse,
 )
-async def get_image_upload_url(request: PresignedUrlRequest, service: BusService = Depends()):
+async def get_image_upload_url(
+    request: PresignedUrlRequest,
+    service: BusService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     return await service.generate_presigned_upload_url(request)
 
 
@@ -80,7 +96,12 @@ async def get_image_upload_url(request: PresignedUrlRequest, service: BusService
     '/{bus_id}/image/save',
     response_model=BusRead,
 )
-async def image_save(bus_id: UUID, payload: PhotoUploadComplete, service: BusService = Depends()):
+async def image_save(
+    bus_id: UUID,
+    payload: PhotoUploadComplete,
+    service: BusService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     return await service.image_save(bus_id, payload.photo_key)
 
 
@@ -88,7 +109,11 @@ async def image_save(bus_id: UUID, payload: PhotoUploadComplete, service: BusSer
     '/{bus_id}/image',
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def delete_image(bus_id: UUID, service: BusService = Depends()):
+async def delete_image(
+    bus_id: UUID,
+    service: BusService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
     await service.delete_image(bus_id)
 
 
@@ -99,6 +124,7 @@ async def test_upload_to_s3(
     fields: str = Form(...),
     file: UploadFile = File(...),
     service: BusService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
 ):
     import json
 

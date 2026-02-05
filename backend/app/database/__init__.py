@@ -9,5 +9,6 @@ from app.features.stop.models import Stop
 from app.features.ticket.models import Ticket
 from app.features.trip.models import Trip
 from app.features.trip_stop.models import TripStop
+from app.features.user.models import User
 
-__all__ = ['Base', 'City', 'Bus', 'Stop', 'Trip', 'TripStop', 'Order', 'Seat', 'Ticket']
+__all__ = ['Base', 'City', 'Bus', 'Stop', 'Trip', 'TripStop', 'Order', 'Seat', 'Ticket', 'User']

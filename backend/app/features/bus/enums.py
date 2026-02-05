@@ -2,7 +2,7 @@ from enum import StrEnum
 
 
 class BusSortBy(StrEnum):
-    NUMBER_PLATE = 'NUMBER_PLATE'
-    COLOR = 'COLOR'
-    SEATS_QUANTITY = 'SEATS_QUANTITY'
-    CREATED_AT = 'CREATED_AT'
+    NUMBER_PLATE = 'number_plate'
+    COLOR = 'color'
+    SEATS_QUANTITY = 'seats_quantity'
+    CREATED_AT = 'created_at'

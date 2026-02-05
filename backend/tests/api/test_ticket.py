@@ -5,17 +5,17 @@ from httpx import AsyncClient
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.seat.enums import SeatStatus
 from app.features.bus.schemas import BusRead
 from app.features.bus.service import BusService
 from app.features.city.schemas import CityRead
 from app.features.city.service import CityService
+from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.seat.schemas import SeatRead
+from app.features.seat.service import SeatService
 from app.features.stop.schemas import StopRead
 from app.features.stop.service import StopService
 from app.features.ticket.schemas import TicketRead
-from app.features.seat.service import SeatService
 from app.features.trip.schemas import TripRead
 from app.features.trip_stop.schemas import TripStopCreate
 from tests.factories import (
@@ -57,14 +57,19 @@ async def create_test_trip(
     bus = bus_result.scalar_one()
 
     trip_stmt = (
-        insert(Trip)
-        .values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity)
-        .returning(Trip)
+        insert(Trip).values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity).returning(Trip)
     )
     trip_result = await session.execute(trip_stmt)
     trip = trip_result.scalar_one()
 
     seat_service = SeatService(session, ticket_service=None, order_service=None, trip_stop_service=None)
+    await seat_service._create_seats_for_bus(bus.seats_quantity, trip.id)
+
+    if stops:
+        stops_data = [{**stop.model_dump(), 'trip_id': trip.id} for stop in stops]
+        await session.execute(insert(TripStop).values(stops_data))
+
+    await session.refresh(trip)
     await seat_service._create_seats_for_bus(bus.seats_quantity, trip.id)
 
     if stops:
@@ -139,6 +144,7 @@ class TestTicketGet:
 
         ticket = TicketRead.model_validate(response.json())
         assert ticket.price == Decimal('50.00')
+        assert ticket.price == Decimal('50.00')
         assert ticket.trip_id == trip.id
 
     async def test_fail_not_found(self, session: AsyncSession, client: AsyncClient):
@@ -194,16 +200,21 @@ class TestTicketUpdate:
 
     async def test_success_update_unknown_field_ignored(self, session: AsyncSession, client: AsyncClient):
         """Test that unknown fields in update payload are ignored."""
+
+    async def test_success_update_unknown_field_ignored(self, session: AsyncSession, client: AsyncClient):
+        """Test that unknown fields in update payload are ignored."""
         trip, seats, stop1, stop2 = await setup_trip_with_stops_and_seats(session)
 
         reserve_response = await create_reservation(client, trip.id, seats[:1], stop1.id, stop2.id)
         ticket_id = reserve_response.json()['tickets'][0]['id']
 
         payload = {'unknown_field': 'some_value'}
+        payload = {'unknown_field': 'some_value'}
         response = await client.patch(f'/tickets/{ticket_id}', json=payload)
         assert response.status_code == 200
 
         ticket = TicketRead.model_validate(response.json())
+        assert ticket.pdf_status == 'PENDING'
         assert ticket.pdf_status == 'PENDING'
 
     async def test_success_update_multiple_fields(self, session: AsyncSession, client: AsyncClient):
@@ -266,6 +277,67 @@ class TestTicketUpdate:
         payload = {'passenger_name': ''}
         response = await client.patch(f'/tickets/{ticket_id}', json=payload)
         assert response.status_code == 422
+
+
+class TestSeatReservation:
+    """Tests for the reservation flow through seats endpoint."""
+
+    async def test_reserve_success(self, session: AsyncSession, client: AsyncClient):
+        trip, seats, stop1, stop2 = await setup_trip_with_stops_and_seats(session)
+
+        response = await create_reservation(client, trip.id, seats[:2], stop1.id, stop2.id)
+        assert response.status_code == 201
+
+        data = response.json()
+        assert data['status'] == 'PENDING'
+        assert Decimal(data['total_price']) == Decimal('100.00')
+        assert len(data['tickets']) == 2
+        assert data['expires_at'] is not None
+
+    async def test_reserve_seat_not_available(self, session: AsyncSession, client: AsyncClient):
+        trip, seats, stop1, stop2 = await setup_trip_with_stops_and_seats(session)
+
+        # Reserve seats first time
+        response1 = await create_reservation(client, trip.id, seats[:1], stop1.id, stop2.id)
+        assert response1.status_code == 201
+
+        # Try to reserve same seat again
+        response2 = await create_reservation(client, trip.id, seats[:1], stop1.id, stop2.id)
+        assert response2.status_code == 409
+        assert 'not available' in response2.json()['error']['message']
+
+    async def test_reserve_trip_not_found(self, session: AsyncSession, client: AsyncClient):
+        fake_trip_id = uuid4()
+        fake_seat_id = uuid4()
+        fake_stop_id = uuid4()
+
+        ticket_data = ReserveTicketRequestFactory.build(
+            seat_id=fake_seat_id,
+            start_stop_id=fake_stop_id,
+            finish_stop_id=fake_stop_id,
+        ).model_dump(mode='json')
+
+        payload = {'trip_id': str(fake_trip_id), 'tickets': [ticket_data]}
+
+        response = await client.post('/seats/reserve', json=payload)
+        assert response.status_code == 404
+        assert response.json()['error']['message'] == 'Resource not found'
+
+    async def test_reserve_seat_not_exist(self, session: AsyncSession, client: AsyncClient):
+        trip, seats, stop1, stop2 = await setup_trip_with_stops_and_seats(session)
+
+        fake_seat_id = uuid4()
+        ticket_data = ReserveTicketRequestFactory.build(
+            seat_id=fake_seat_id,
+            start_stop_id=stop1.id,
+            finish_stop_id=stop2.id,
+        ).model_dump(mode='json')
+
+        payload = {'trip_id': str(trip.id), 'tickets': [ticket_data]}
+
+        response = await client.post('/seats/reserve', json=payload)
+        assert response.status_code == 409
+        assert 'do not exist' in response.json()['error']['message']
 
 
 class TestSeatReservation:
