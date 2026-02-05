@@ -21,7 +21,7 @@ jobs:
               poetry config virtualenvs.create false
 
          - name: Install Deps
-           run: make install
+           run: make install-docker
 
          - name: Lint
            run: make lint-no-format
