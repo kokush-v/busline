@@ -55,6 +55,8 @@ jobs:
 
                  ls -la
 
+                 cp .env.staging .env
+
                  docker build -t busline-app .
                  docker stop busline-container || true
                  docker rm busline-container || true
