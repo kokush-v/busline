@@ -43,23 +43,21 @@ jobs:
               key: ${{ secrets.EC2_SSH_KEY }}
               script: |
                  if [ ! -d "~/busline-backend/.git" ]; then
-                   echo "🚀 Cloning repository for the first time..."
-                   git clone https://github.com/${{ github.repository }}.git ~/busline-backend
+                 echo "🧹 Cleaning up and cloning..."
+                 rm -rf ~/busline-backend
+                 git clone git@github.com:${{ github.repository }}.git ~/busline-backend
                  fi
 
                  cd ~/busline-backend
-                 git pull origin main
+
+                 git fetch origin
+                 git reset --hard origin/main
+
+                 ls -la
 
                  docker build -t busline-app .
-
                  docker stop busline-container || true
                  docker rm busline-container || true
 
                  docker run --rm --net=host --env-file .env busline-app make migrate
-
-                 docker run -d \
-                   --name busline-container \
-                   --net=host \
-                   --env-file .env \
-                   --restart unless-stopped \
-                   busline-app
+                 docker run -d --name busline-container --net=host --env-file .env --restart unless-stopped busline-app
