@@ -125,7 +125,7 @@ class SeatService:
         await self.__validate_seats_availability(trip_id, seat_ids)
 
         order_data = await self.__create_order_for_reservation(trip.price_per_seat, len(tickets))
-        order = await self._order_service._create_order(order_data)
+        order = await self._order_service._create_order(order_data, user_id=user_id)
 
         await self.__lock_reserved_seats(seat_ids)
 
