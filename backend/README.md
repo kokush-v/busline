@@ -27,9 +27,10 @@ make help
 
 ### Setup
 
-| Command        | Description                  |
-| -------------- | ---------------------------- |
-| `make install` | Install project dependencies |
+| Command               | Description                               |
+| --------------------- | ----------------------------------------- |
+| `make install`        | Install project dependencies              |
+| `make install-docker` | Install dependencies without root package |
 
 ### Development
 
@@ -57,31 +58,31 @@ make migrate-create MESSAGE='add_city_model'
 | Command                            | Description                      |
 | ---------------------------------- | -------------------------------- |
 | `make test`                        | Run all tests                    |
-| `make test-integration`            | Run integration tests            |
-| `make test-unit`                   | Run unit tests                   |
+| `make test-api`                    | Run API tests                    |
 | `make test-feature FEATURE=<name>` | Run tests for a specific feature |
 
 **Examples:**
 
 ```bash
 make test                           # All tests
-make test-integration               # Integration tests
-make test-unit                      # Unit tests
+make test-api                       # API tests
 make test-feature FEATURE=city      # Tests for 'city' feature
 ```
 
 ### Code Quality
 
-| Command       | Description                 |
-| ------------- | --------------------------- |
-| `make lint`   | Check code style using Ruff |
-| `make format` | Format code using Ruff      |
+| Command               | Description                                 |
+| --------------------- | ------------------------------------------- |
+| `make lint`           | Format and check code (ruff format + check) |
+| `make lint-no-format` | Check code style only (ruff check)          |
+| `make format`         | Format code only (ruff format)              |
 
 ### Utilities
 
-| Command      | Description                                                       |
-| ------------ | ----------------------------------------------------------------- |
-| `make clean` | Clean cache files (`__pycache__`, `.pytest_cache`, `.ruff_cache`) |
+| Command             | Description                                                       |
+| ------------------- | ----------------------------------------------------------------- |
+| `make clean`        | Clean cache files (`__pycache__`, `.pytest_cache`, `.ruff_cache`) |
+| `make open-db-conn` | Open database connection using `open-db-connection.sh`            |
 
 ## Project Structure
 
@@ -97,8 +98,7 @@ app/
 
 tests/
 ├── conftest.py                # Pytest config and global fixtures
-├── integration/               # Integration tests by feature
-└── unit/                      # Unit tests by feature
+└── api/                       # API tests by feature
 ```
 
 ## Technologies
@@ -107,10 +107,27 @@ tests/
 - **SQLAlchemy 2.0** - ORM with async support and type annotations
 - **Alembic** - Database migrations
 - **Pytest** - Testing framework
-- **Ruff** - Fast linter and formatter (not implemented yet)
-- **Pydantic** - Data validation with type hints
+- **Ruff** - Fast linter and formatter
+- **Pydantic** / **pydantic-settings** - Data validation and settings
 - **PostgreSQL** - Primary database
 - **Uvicorn** - ASGI server
+- **Structlog** - Structured logging
+- **aioboto3** - AWS SDK (async)
+- **python-jose** - JWT/JWE/JWS utilities
+
+## Configuration
+
+The application reads environment variables from a `.env` file in the project root.
+Key settings are defined in [app/settings/env.py](app/settings/env.py).
+
+Minimal example:
+
+```dotenv
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
+ENVIRONMENT=dev
+DEBUG=false
+LOG_LEVEL=INFO
+```
 
 ## Development
 
@@ -125,12 +142,8 @@ API documentation at `http://localhost:8000/docs`
 
 ## Test Architecture
 
-The project uses a two-level test architecture:
-
-- **Integration tests** (`tests/integration/`) - testing API endpoints and routes
-- **Unit tests** (`tests/unit/`) - testing individual components (schemas, services)
-
-Both test types use in-memory SQLite database for isolated testing.
+API tests live in `tests/api/` and use shared fixtures from `tests/conftest.py`.
+Tests spin up PostgreSQL via Testcontainers and mock AWS services with Moto.
 
 ## Guidelines
 
