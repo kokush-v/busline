@@ -2,7 +2,7 @@ name: Busline CI/CD
 
 on:
    push:
-      branches: ["main", "feat/ci-cd-configuration"]
+      branches: ["main"]
 
 jobs:
    quality-assurance:
@@ -33,7 +33,7 @@ jobs:
       needs: quality-assurance
       runs-on: ubuntu-latest
       environment: staging
-      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/ci-cd-configuration'
+      if: github.ref == 'refs/heads/main'
       steps:
          - name: Deploy to EC2 via SSH
            uses: appleboy/ssh-action@v1.0.3
