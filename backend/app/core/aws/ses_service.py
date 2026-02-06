@@ -11,6 +11,14 @@ from app.core.exeptions import SESException
 from app.settings.env import get_env_settings
 
 
+class SESErrorCode(StrEnum):
+    """Common AWS SES error codes for handling exceptions."""
+
+    MESSAGE_REJECTED = 'MessageRejected'
+    MAIL_FROM_DOMAIN_NOT_VERIFIED = 'MailFromDomainNotVerified'
+    TEMPLATE_DOES_NOT_EXIST = 'TemplateDoesNotExist'
+
+
 class EmailTemplate(StrEnum):
     """AWS SES email template names."""
 
@@ -40,19 +48,19 @@ class SESService:
         error_code = e.response.get('Error', {}).get('Code', 'Unknown')
 
         match error_code:
-            case 'MessageRejected':
+            case SESErrorCode.MESSAGE_REJECTED:
                 raise SESException(
                     status=status.HTTP_400_BAD_REQUEST,
                     message='Email was rejected by SES',
                     details={'error': str(e), 'to_email': to_email},
                 ) from e
-            case 'MailFromDomainNotVerified':
+            case SESErrorCode.MAIL_FROM_DOMAIN_NOT_VERIFIED:
                 raise SESException(
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     message='Sender domain is not verified in SES',
                     details={'error': str(e)},
                 ) from e
-            case 'TemplateDoesNotExist':
+            case SESErrorCode.TEMPLATE_DOES_NOT_EXIST:
                 raise SESException(
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     message='Email template does not exist in SES',
