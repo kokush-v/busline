@@ -88,10 +88,7 @@ class PaymentService:
     async def process_payment_webhook(self, payload: PaymentWebhookRequest) -> Order:
         """Process a simulated payment webhook payload."""
         order_stmt = (
-            select(Order)
-            .where(Order.id == payload.order_id)
-            .options(selectinload(Order.user))
-            .with_for_update()
+            select(Order).where(Order.id == payload.order_id).options(selectinload(Order.user)).with_for_update()
         )
         result = await self._session.execute(order_stmt)
         order = result.scalar_one()
