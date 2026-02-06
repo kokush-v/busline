@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from alembic.config import Config as AlembicConfig
+from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -13,9 +14,17 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.settings.env import get_env_settings
 
+POSTGRES_INDEXES_NAMING_CONVENTION = {
+    'ix': '%(column_0_label)s_idx',
+    'uq': '%(table_name)s_%(column_0_name)s_key',
+    'ck': '%(table_name)s_%(constraint_name)s_check',
+    'fk': '%(table_name)s_%(column_0_name)s_fkey',
+    'pk': '%(table_name)s_pkey',
+}
+
 
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(naming_convention=POSTGRES_INDEXES_NAMING_CONVENTION)
 
 
 class DatabaseHelper:

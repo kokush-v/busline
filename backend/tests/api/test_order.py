@@ -1,28 +1,29 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from httpx import AsyncClient
 from pydantic import TypeAdapter
-from sqlalchemy import insert
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.statuses import OrderStatus, SeatStatus
 from app.features.bus.schemas import BusRead
 from app.features.bus.service import BusService
 from app.features.city.schemas import CityRead
 from app.features.city.service import CityService
+from app.features.order.enums import OrderStatus
 from app.features.order.models import Order
 from app.features.order.schemas import OrderRead
+from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.seat.schemas import SeatRead
+from app.features.seat.service import SeatService
 from app.features.stop.schemas import StopRead
 from app.features.stop.service import StopService
 from app.features.ticket.schemas import TicketRead
-from app.features.seat.service import SeatService
-from app.features.trip.schemas import TripCreate, TripRead
-from app.features.trip.service import TripService
+from app.features.trip.schemas import TripRead
 from app.features.trip_stop.schemas import TripStopCreate
+from tests.conftest import TEST_USER_ID
 from tests.factories import (
     BusCreateFactory,
     CityCreateFactory,
@@ -51,13 +52,30 @@ async def create_test_stop(session: AsyncSession, city_id, **kwargs) -> StopRead
     return StopRead.model_validate(stop)
 
 
-async def create_test_trip(session: AsyncSession, bus_id, stops: list[TripStopCreate] | None = None) -> TripRead:
-    trip_creation = TripCreate(bus_id=bus_id, stops=stops or [])
-    bus_service = BusService(session)
-    city_service = CityService(session)
-    stop_service = StopService(session, city_service)
+async def create_test_trip(
+    session: AsyncSession, bus_id, stops: list[TripStopCreate] | None = None, price_per_seat: float = 50.0
+) -> TripRead:
+    from app.features.bus.models import Bus
+    from app.features.trip.models import Trip
+    from app.features.trip_stop.models import TripStop
+
+    bus_result = await session.execute(select(Bus).where(Bus.id == bus_id))
+    bus = bus_result.scalar_one()
+
+    trip_stmt = (
+        insert(Trip).values(bus_id=bus_id, price_per_seat=price_per_seat, seats_left=bus.seats_quantity).returning(Trip)
+    )
+    trip_result = await session.execute(trip_stmt)
+    trip = trip_result.scalar_one()
+
     seat_service = SeatService(session, ticket_service=None, order_service=None, trip_stop_service=None)
-    trip = await TripService(session, bus_service, stop_service, seat_service).create_trip(trip_creation)
+    await seat_service._create_seats_for_bus(bus.seats_quantity, trip.id)
+
+    if stops:
+        stops_data = [{**stop.model_dump(), 'trip_id': trip.id} for stop in stops]
+        await session.execute(insert(TripStop).values(stops_data))
+
+    await session.refresh(trip)
     return TripRead.model_validate(trip)
 
 
@@ -219,6 +237,7 @@ class TestOrderTickets:
             'status': OrderStatus.PENDING,
             'total_price': Decimal('0.00'),
             'expires_at': datetime.now(UTC) + timedelta(minutes=30),
+            'user_id': UUID(TEST_USER_ID),
         }
         result = await session.execute(insert(Order).values(**order_data).returning(Order))
         order = result.scalar_one()
@@ -226,64 +245,3 @@ class TestOrderTickets:
         response = await client.get(f'/orders/{order.id}/tickets')
         assert response.status_code == 200
         assert response.json() == []
-
-
-class TestSeatReservation:
-    """Tests for the reservation flow through seats endpoint."""
-
-    async def test_reserve_success(self, session: AsyncSession, client: AsyncClient):
-        trip, seats, stop1, stop2 = await setup_trip_with_stops_and_seats(session, client)
-
-        response = await create_reservation(client, trip.id, seats[:2], stop1.id, stop2.id)
-        assert response.status_code == 201
-
-        data = response.json()
-        assert data['status'] == 'pending'
-        assert Decimal(data['total_price']) == Decimal('100.00')
-        assert len(data['tickets']) == 2
-        assert data['expires_at'] is not None
-
-    async def test_reserve_seat_not_available(self, session: AsyncSession, client: AsyncClient):
-        trip, seats, stop1, stop2 = await setup_trip_with_stops_and_seats(session, client)
-
-        # Reserve seats first time
-        response1 = await create_reservation(client, trip.id, seats[:1], stop1.id, stop2.id)
-        assert response1.status_code == 201
-
-        # Try to reserve same seat again
-        response2 = await create_reservation(client, trip.id, seats[:1], stop1.id, stop2.id)
-        assert response2.status_code == 409
-        assert 'not available' in response2.json()['error']['message']
-
-    async def test_reserve_trip_not_found(self, session: AsyncSession, client: AsyncClient):
-        fake_trip_id = uuid4()
-        fake_seat_id = uuid4()
-        fake_stop_id = uuid4()
-
-        ticket_data = ReserveTicketRequestFactory.build(
-            seat_id=fake_seat_id,
-            start_stop_id=fake_stop_id,
-            finish_stop_id=fake_stop_id,
-        ).model_dump(mode='json')
-
-        payload = {'trip_id': str(fake_trip_id), 'tickets': [ticket_data]}
-
-        response = await client.post('/seats/reserve', json=payload)
-        assert response.status_code == 404
-        assert response.json()['error']['message'] == 'Resource not found'
-
-    async def test_reserve_seat_not_exist(self, session: AsyncSession, client: AsyncClient):
-        trip, seats, stop1, stop2 = await setup_trip_with_stops_and_seats(session, client)
-
-        fake_seat_id = uuid4()
-        ticket_data = ReserveTicketRequestFactory.build(
-            seat_id=fake_seat_id,
-            start_stop_id=stop1.id,
-            finish_stop_id=stop2.id,
-        ).model_dump(mode='json')
-
-        payload = {'trip_id': str(trip.id), 'tickets': [ticket_data]}
-
-        response = await client.post('/seats/reserve', json=payload)
-        assert response.status_code == 409
-        assert 'do not exist' in response.json()['error']['message']

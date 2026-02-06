@@ -1,0 +1,65 @@
+name: Busline CI/CD
+
+on:
+   push:
+      branches: ["main"]
+
+jobs:
+   quality-assurance:
+      runs-on: ubuntu-latest
+      steps:
+         - uses: actions/checkout@v4
+
+         - name: Set up Python
+           uses: actions/setup-python@v5
+           with:
+              python-version: "3.12"
+
+         - name: Install Poetry
+           run: |
+              pip install poetry
+              poetry config virtualenvs.create false
+
+         - name: Install Deps
+           run: make install-docker
+
+         - name: Lint
+           run: make lint-no-format
+
+         - name: Test
+           run: make test
+
+   deploy:
+      needs: quality-assurance
+      runs-on: ubuntu-latest
+      environment: staging
+      if: github.ref == 'refs/heads/main'
+      steps:
+         - name: Deploy to EC2 via SSH
+           uses: appleboy/ssh-action@v1.0.3
+           with:
+              host: ${{ secrets.EC2_HOST }}
+              username: ubuntu
+              key: ${{ secrets.EC2_SSH_KEY }}
+              script: |
+                 if [ ! -d "~/busline-backend/.git" ]; then
+                 echo "🧹 Cleaning up and cloning..."
+                 rm -rf ~/busline-backend
+                 git clone git@github.com:${{ github.repository }}.git ~/busline-backend
+                 fi
+
+                 cd ~/busline-backend
+
+                 git fetch origin
+                 git reset --hard origin/${{ github.ref_name }}
+
+                 ls -la
+
+                 cp .env.staging .env
+
+                 docker build -t busline-app .
+                 docker stop busline-container || true
+                 docker rm busline-container || true
+
+                 docker run --rm --net=host --env-file .env busline-app make migrate
+                 docker run -d --name busline-container --net=host --env-file .env --restart unless-stopped busline-app

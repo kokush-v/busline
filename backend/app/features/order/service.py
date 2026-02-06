@@ -37,8 +37,8 @@ class OrderService:
         orders = result.scalars().all()
         return orders
 
-    async def _create_order(self, payload: OrderCreate) -> Order:
-        order_stmt = insert(Order).values(**payload.model_dump()).returning(Order)
+    async def _create_order(self, payload: OrderCreate, user_id: UUID) -> Order:
+        order_stmt = insert(Order).values(**payload.model_dump(), user_id=user_id).returning(Order)
         order_result = await self._session.execute(order_stmt)
         order = order_result.scalar_one()
         return order
@@ -55,10 +55,11 @@ class OrderService:
                 extra={'ticket_id': str(ticket.id), 'order_id': str(order_id)},
             )
 
-    async def __trigger_pdf_for_all_tickets(self, order: Order) -> None:
+    async def __trigger_pdf_for_all_tickets(self, order_id: UUID) -> None:
+        tickets = await self.get_order_tickets(order_id)
         async with TaskGroup() as tg:
-            for ticket in order.tickets:
-                tg.create_task(self.__trigger_pdf_for_ticket(ticket, order.id))
+            for ticket in tickets:
+                tg.create_task(self.__trigger_pdf_for_ticket(ticket, order_id))
 
     @transactional
     async def pay_order(self, order_id: UUID) -> Order:
@@ -82,7 +83,7 @@ class OrderService:
 
         await self._session.execute(update_seats_stmt)
 
-        await self.__trigger_pdf_for_all_tickets(order)
+        await self.__trigger_pdf_for_all_tickets(order.id)
 
         return order
 

@@ -1,8 +1,8 @@
-"""create tables
+"""init-tables
 
-Revision ID: f7db88da0f72
+Revision ID: 299ebc9d1951
 Revises:
-Create Date: 2026-02-01 00:29:28.563576
+Create Date: 2026-02-05 19:08:14.632984
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = 'f7db88da0f72'
+revision: str = '299ebc9d1951'
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -31,11 +31,11 @@ def upgrade() -> None:
         sa.Column('thumbnail_url', sa.String(length=500), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.CheckConstraint('seats_quantity >= 0', name='check_seats_quantity_non_negative'),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('number_plate'),
+        sa.CheckConstraint('seats_quantity >= 0', name=op.f('buses_check_seats_quantity_non_negative_check')),
+        sa.PrimaryKeyConstraint('id', name=op.f('buses_pkey')),
+        sa.UniqueConstraint('number_plate', name=op.f('buses_number_plate_key')),
     )
-    op.create_index(op.f('ix_buses_id'), 'buses', ['id'], unique=False)
+    op.create_index(op.f('buses_id_idx'), 'buses', ['id'], unique=False)
     op.create_table(
         'cities',
         sa.Column('id', sa.UUID(), nullable=False),
@@ -44,14 +44,27 @@ def upgrade() -> None:
         sa.Column('latitude', sa.Float(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('name'),
+        sa.PrimaryKeyConstraint('id', name=op.f('cities_pkey')),
+        sa.UniqueConstraint('name', name=op.f('cities_name_key')),
     )
-    op.create_index(op.f('ix_cities_id'), 'cities', ['id'], unique=False)
+    op.create_index(op.f('cities_id_idx'), 'cities', ['id'], unique=False)
+    op.create_table(
+        'users',
+        sa.Column('id', sa.UUID(), nullable=False),
+        sa.Column('email', sa.String(length=255), nullable=False),
+        sa.Column('name', sa.String(length=255), nullable=True),
+        sa.Column('role', sa.Enum('ADMIN', 'USER', name='userrole'), nullable=False),
+        sa.Column('is_active', sa.Boolean(), server_default='true', nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.PrimaryKeyConstraint('id', name=op.f('users_pkey')),
+        sa.UniqueConstraint('email', name=op.f('users_email_key')),
+    )
+    op.create_index(op.f('users_id_idx'), 'users', ['id'], unique=False)
     op.create_table(
         'orders',
         sa.Column('id', sa.UUID(), nullable=False),
-        sa.Column('user_id', sa.UUID(), nullable=True),
+        sa.Column('user_id', sa.UUID(), nullable=False),
         sa.Column(
             'status',
             sa.Enum('PENDING', 'PROCESSING', 'PAID', 'FAILED', 'CANCELLED', name='orderstatus'),
@@ -63,9 +76,10 @@ def upgrade() -> None:
         sa.Column('payment_method', sa.String(length=50), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.PrimaryKeyConstraint('id'),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('orders_user_id_fkey'), ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id', name=op.f('orders_pkey')),
     )
-    op.create_index(op.f('ix_orders_id'), 'orders', ['id'], unique=False)
+    op.create_index(op.f('orders_id_idx'), 'orders', ['id'], unique=False)
     op.create_table(
         'stops',
         sa.Column('id', sa.UUID(), nullable=False),
@@ -75,10 +89,10 @@ def upgrade() -> None:
         sa.Column('longitude', sa.Float(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.ForeignKeyConstraint(['city_id'], ['cities.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
+        sa.ForeignKeyConstraint(['city_id'], ['cities.id'], name=op.f('stops_city_id_fkey'), ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id', name=op.f('stops_pkey')),
     )
-    op.create_index(op.f('ix_stops_id'), 'stops', ['id'], unique=False)
+    op.create_index(op.f('stops_id_idx'), 'stops', ['id'], unique=False)
     op.create_table(
         'trips',
         sa.Column('id', sa.UUID(), nullable=False),
@@ -87,14 +101,11 @@ def upgrade() -> None:
         sa.Column('seats_left', sa.Integer(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.CheckConstraint('seats_left >= 0', name='check_seats_left_non_negative'),
-        sa.ForeignKeyConstraint(
-            ['bus_id'],
-            ['buses.id'],
-        ),
-        sa.PrimaryKeyConstraint('id'),
+        sa.CheckConstraint('seats_left >= 0', name=op.f('trips_check_seats_left_non_negative_check')),
+        sa.ForeignKeyConstraint(['bus_id'], ['buses.id'], name=op.f('trips_bus_id_fkey')),
+        sa.PrimaryKeyConstraint('id', name=op.f('trips_pkey')),
     )
-    op.create_index(op.f('ix_trips_id'), 'trips', ['id'], unique=False)
+    op.create_index(op.f('trips_id_idx'), 'trips', ['id'], unique=False)
     op.create_table(
         'seats',
         sa.Column('id', sa.UUID(), nullable=False),
@@ -103,10 +114,10 @@ def upgrade() -> None:
         sa.Column('status', sa.Enum('FREE', 'LOCKED', 'SOLD', name='seatstatus'), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.ForeignKeyConstraint(['trip_id'], ['trips.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
+        sa.ForeignKeyConstraint(['trip_id'], ['trips.id'], name=op.f('seats_trip_id_fkey'), ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id', name=op.f('seats_pkey')),
     )
-    op.create_index(op.f('ix_seats_id'), 'seats', ['id'], unique=False)
+    op.create_index(op.f('seats_id_idx'), 'seats', ['id'], unique=False)
     op.create_table(
         'trip_stops',
         sa.Column('id', sa.UUID(), nullable=False),
@@ -117,13 +128,15 @@ def upgrade() -> None:
         sa.Column('departure_time', sa.DateTime(timezone=True), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.CheckConstraint('departure_time > arrival_time', name='check_departure_after_arrival'),
-        sa.CheckConstraint('position_index >= 1', name='check_position_positive'),
-        sa.ForeignKeyConstraint(['stop_id'], ['stops.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['trip_id'], ['trips.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
+        sa.CheckConstraint(
+            'departure_time > arrival_time', name=op.f('trip_stops_check_departure_after_arrival_check')
+        ),
+        sa.CheckConstraint('position_index >= 1', name=op.f('trip_stops_check_position_positive_check')),
+        sa.ForeignKeyConstraint(['stop_id'], ['stops.id'], name=op.f('trip_stops_stop_id_fkey'), ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['trip_id'], ['trips.id'], name=op.f('trip_stops_trip_id_fkey'), ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id', name=op.f('trip_stops_pkey')),
     )
-    op.create_index(op.f('ix_trip_stops_id'), 'trip_stops', ['id'], unique=False)
+    op.create_index(op.f('trip_stops_id_idx'), 'trip_stops', ['id'], unique=False)
     op.create_table(
         'tickets',
         sa.Column('id', sa.UUID(), nullable=False),
@@ -146,47 +159,37 @@ def upgrade() -> None:
         sa.Column('pdf_error', sa.String(length=500), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.ForeignKeyConstraint(
-            ['finish_stop_id'],
-            ['stops.id'],
-        ),
-        sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(
-            ['seat_id'],
-            ['seats.id'],
-        ),
-        sa.ForeignKeyConstraint(
-            ['start_stop_id'],
-            ['stops.id'],
-        ),
-        sa.ForeignKeyConstraint(
-            ['trip_id'],
-            ['trips.id'],
-        ),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('seat_id'),
+        sa.ForeignKeyConstraint(['finish_stop_id'], ['stops.id'], name=op.f('tickets_finish_stop_id_fkey')),
+        sa.ForeignKeyConstraint(['order_id'], ['orders.id'], name=op.f('tickets_order_id_fkey'), ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['seat_id'], ['seats.id'], name=op.f('tickets_seat_id_fkey')),
+        sa.ForeignKeyConstraint(['start_stop_id'], ['stops.id'], name=op.f('tickets_start_stop_id_fkey')),
+        sa.ForeignKeyConstraint(['trip_id'], ['trips.id'], name=op.f('tickets_trip_id_fkey')),
+        sa.PrimaryKeyConstraint('id', name=op.f('tickets_pkey')),
+        sa.UniqueConstraint('seat_id', name=op.f('tickets_seat_id_key')),
     )
-    op.create_index(op.f('ix_tickets_id'), 'tickets', ['id'], unique=False)
+    op.create_index(op.f('tickets_id_idx'), 'tickets', ['id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_tickets_id'), table_name='tickets')
+    op.drop_index(op.f('tickets_id_idx'), table_name='tickets')
     op.drop_table('tickets')
-    op.drop_index(op.f('ix_trip_stops_id'), table_name='trip_stops')
+    op.drop_index(op.f('trip_stops_id_idx'), table_name='trip_stops')
     op.drop_table('trip_stops')
-    op.drop_index(op.f('ix_seats_id'), table_name='seats')
+    op.drop_index(op.f('seats_id_idx'), table_name='seats')
     op.drop_table('seats')
-    op.drop_index(op.f('ix_trips_id'), table_name='trips')
+    op.drop_index(op.f('trips_id_idx'), table_name='trips')
     op.drop_table('trips')
-    op.drop_index(op.f('ix_stops_id'), table_name='stops')
+    op.drop_index(op.f('stops_id_idx'), table_name='stops')
     op.drop_table('stops')
-    op.drop_index(op.f('ix_orders_id'), table_name='orders')
+    op.drop_index(op.f('orders_id_idx'), table_name='orders')
     op.drop_table('orders')
-    op.drop_index(op.f('ix_cities_id'), table_name='cities')
+    op.drop_index(op.f('users_id_idx'), table_name='users')
+    op.drop_table('users')
+    op.drop_index(op.f('cities_id_idx'), table_name='cities')
     op.drop_table('cities')
-    op.drop_index(op.f('ix_buses_id'), table_name='buses')
+    op.drop_index(op.f('buses_id_idx'), table_name='buses')
     op.drop_table('buses')
     # ### end Alembic commands ###

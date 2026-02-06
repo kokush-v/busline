@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.common.schemas import EntityModel, PaginatedResponse, QueryParams
 from app.features.trip.enums import TripSortBy
@@ -22,8 +22,8 @@ class TripCreate(TripBase):
             raise ValueError('Trip must have at least 2 stops')
         return self
 
-    model_config = {
-        'json_schema_extra': {
+    model_config = ConfigDict(
+        json_schema_extra={
             'example': {
                 'bus_id': '550e8400-e29b-41d4-a716-446655440000',
                 'price_per_seat': 150.00,
@@ -43,7 +43,7 @@ class TripCreate(TripBase):
                 ],
             }
         }
-    }
+    )
 
 
 class TripUpdate(BaseModel):
@@ -83,6 +83,8 @@ class TripRead(EntityModel):
 
 class TripReadPublic(BaseModel):
     """Public view of trip with limited information."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     bus_id: UUID
