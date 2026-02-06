@@ -1,4 +1,3 @@
-from asyncio import TaskGroup
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
@@ -15,7 +14,7 @@ from app.features.order.service import OrderService
 from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.seat.schemas import ReserveSeatRequest, ReserveSeatResponse
-from app.features.ticket.schemas import TicketCreate, TicketRead
+from app.features.ticket.schemas import ReserveTicketRequest, TicketCreate, TicketRead
 from app.features.ticket.service import TicketService
 from app.features.trip.models import Trip
 from app.features.trip_stop.service import TripStopService
@@ -59,15 +58,6 @@ class SeatService:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def __validate_trip_stops(self, trip_id: UUID, tickets_ids) -> None:
-        async with TaskGroup() as tg:
-            for ticket in tickets_ids:
-                tg.create_task(
-                    await self._trip_stop_service.validate_stops_exist_in_trip(
-                        trip_id, ticket.start_stop_id, ticket.finish_stop_id
-                    )
-                )
-
     async def __validate_seats_availability(self, trip_id: UUID, seat_ids: list[UUID]) -> list:
         stmt = (
             select(Seat.id, Seat.status, Seat.position_index)
@@ -100,7 +90,9 @@ class SeatService:
     async def __lock_reserved_seats(self, seat_ids: list[UUID]) -> None:
         await self._session.execute(update(Seat).where(Seat.id.in_(seat_ids)).values(status=SeatStatus.LOCKED))
 
-    def __prepare_tickets_data(self, order_id: UUID, trip_id: UUID, price_per_seat: Decimal, tickets_ids) -> list:
+    def __prepare_tickets_data(
+        self, order_id: UUID, trip_id: UUID, price_per_seat: Decimal, tickets: list[ReserveTicketRequest]
+    ) -> list[TicketCreate]:
         return [
             TicketCreate(
                 order_id=order_id,
@@ -113,7 +105,7 @@ class SeatService:
                 start_stop_id=t.start_stop_id,
                 finish_stop_id=t.finish_stop_id,
             )
-            for t in tickets_ids
+            for t in tickets
         ]
 
     @transactional
@@ -122,23 +114,23 @@ class SeatService:
         Reserve seats, create an order, and generate tickets.
         """
         trip_id = payload.trip_id
-        tickets_ids = payload.tickets
+        tickets = payload.tickets
 
         trip_result = await self._session.execute(select(Trip).where(Trip.id == trip_id))
         trip = trip_result.scalar_one()
 
-        await self.__validate_trip_stops(trip_id, tickets_ids)
+        await self._trip_stop_service.validate_stops_exist_in_trip(trip_id, tickets)
 
-        seat_ids = [t.seat_id for t in tickets_ids]
+        seat_ids = [t.seat_id for t in tickets]
         await self.__validate_seats_availability(trip_id, seat_ids)
 
-        order_data = await self.__create_order_for_reservation(trip.price_per_seat, len(tickets_ids))
+        order_data = await self.__create_order_for_reservation(trip.price_per_seat, len(tickets))
         order = await self._order_service._create_order(order_data, user_id=user_id)
 
         await self.__lock_reserved_seats(seat_ids)
 
         price_per_seat = Decimal(str(trip.price_per_seat))
-        tickets_data = self.__prepare_tickets_data(order.id, trip_id, price_per_seat, tickets_ids)
+        tickets_data = self.__prepare_tickets_data(order.id, trip_id, price_per_seat, tickets)
         tickets = await self._ticket_service._create_many_tickets(tickets_data)
 
         added_tickets = [TicketRead.model_validate(ticket) for ticket in tickets]
