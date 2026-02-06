@@ -9,6 +9,7 @@ from app.features.auth.route import router as auth_router
 from app.features.bus.route import router as bus_router
 from app.features.city.route import router as city_router
 from app.features.order.route import router as order_router
+from app.features.payment.route import router as payment_router
 from app.features.seat.route import router as seat_router
 from app.features.stop.route import router as stop_router
 from app.features.ticket.route import router as ticket_router
@@ -46,6 +47,7 @@ def get_application(include_middlewares: bool = True) -> FastAPI:
     application.include_router(trip_router)
     application.include_router(stop_router)
     application.include_router(order_router)
+    application.include_router(payment_router)
     application.include_router(seat_router)
     application.include_router(ticket_router)
     application.include_router(user_router)

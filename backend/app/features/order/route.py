@@ -1,15 +1,18 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
+import httpx
 
 from app.core.aws.cognito import get_cognito_service
 from app.features.auth.schemas import CognitoUser
-from app.features.order.schemas import OrderRead
+from app.features.order.schemas import OrderPaymentResponse, OrderRead
 from app.features.order.service import OrderService
 from app.features.ticket.schemas import TicketRead
 from app.features.user.enums import UserRoleGroups
+from app.settings.env import get_env_settings
 
 cognito_service = get_cognito_service()
+env_settings = get_env_settings()
 router = APIRouter(prefix='/orders', tags=['Orders'])
 
 
@@ -23,14 +26,35 @@ async def get_order(
     return await service.get_order(order_id)
 
 
-@router.post('/{order_id}/pay', response_model=OrderRead)
+@router.post('/{order_id}/pay', response_model=OrderPaymentResponse)
 async def pay_order(
     order_id: UUID,
-    service: OrderService = Depends(),
+    status_override: str | None = Query(
+        None,
+        description='Override payment status (PAID, FAILED, PROCESSING). If None, randomly selected.',
+    ),
     _: dict = Depends(cognito_service.roles_required([UserRoleGroups.USER])),
 ):
-    """Process payment for an order (mock implementation)."""
-    return await service.pay_order(order_id)
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                env_settings.PAYMENT_WEBHOOK_URL,
+                json={
+                    'order_id': str(order_id),
+                    'status': status_override or 'PAID',
+                    'payment_method': 'mock',
+                },
+            )
+
+        return OrderPaymentResponse(
+            order_id=order_id,
+            message=f'Payment request submitted. Status: {status_override or "PAID"}',
+        )
+    except Exception as e:
+        return OrderPaymentResponse(
+            order_id=order_id,
+            message=f'Payment request failed: {str(e)}',
+        )
 
 
 @router.delete('/{order_id}', status_code=status.HTTP_204_NO_CONTENT)

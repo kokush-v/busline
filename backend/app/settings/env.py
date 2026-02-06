@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     COGNITO_USER_POOL_ID: str = ''
     COGNITO_CLIENT_ID: str = ''
 
+    # Payment
+    PAYMENT_WEBHOOK_URL: str = ''
+
+    # SES (Email)
+    SES_SENDER_EMAIL: str = ''
+
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
 

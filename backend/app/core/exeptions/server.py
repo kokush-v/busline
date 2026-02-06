@@ -15,6 +15,7 @@ from app.settings.env import get_env_settings
 class ErrorCode(StrEnum):
     DATABASE = 'database'
     STORAGE = 'storage'
+    EMAIL = 'email'
 
 
 class ErrorSchema(BaseModel):

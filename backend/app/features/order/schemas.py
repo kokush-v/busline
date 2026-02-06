@@ -33,3 +33,8 @@ class OrderUpdate(BaseModel):
     status: OrderStatus | None = None
     external_payment_id: str | None = None
     payment_method: str | None = None
+
+
+class OrderPaymentResponse(BaseModel):
+    order_id: UUID
+    message: str
