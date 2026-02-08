@@ -28,7 +28,6 @@ class BusRead(BusBase, EntityModel):
 
 
 class PresignedUrlRequest(BaseModel):
-    filename: str = Field(..., min_length=1, max_length=255)
     content_type: str = Field(..., pattern=r'^image/(jpeg|png)$')
 
 
