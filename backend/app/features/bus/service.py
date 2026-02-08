@@ -164,16 +164,18 @@ class BusService:
     async def generate_presigned_upload_url(self, bus_id: UUID, request: PresignedUrlRequest) -> PresignedUrlResponse:
         await self.get_bus(bus_id)
 
+        photo_key = str(bus_id)
+
         presigned_post = await self._s3_service.generate_presigned_upload_url(
             bucket=self._settings.S3_PHOTOS_BUCKET,
-            key=bus_id,
+            key=photo_key,
             content_type=request.content_type,
             max_size=10485760,  # 10MB
         )
 
         return PresignedUrlResponse(
             upload_url=presigned_post['url'],
-            photo_key=bus_id,
+            photo_key=photo_key,
             fields=presigned_post['fields'],
         )
 
