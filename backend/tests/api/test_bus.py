@@ -161,26 +161,29 @@ class TestBusesDelete:
 
 class TestBusesPresignedUrl:
     async def test_get_upload_url_success(self, session: AsyncSession, client: AsyncClient):
+        bus = await create_test_bus(session)
         payload = {'filename': 'test-image.jpg', 'content_type': 'image/jpeg'}
 
-        response = await client.post('/buses/upload-url', json=payload)
+        response = await client.post(f'/buses/{bus.id}/upload-url', json=payload)
         assert response.status_code == 200
 
         data = response.json()
         assert 'upload_url' in data
-        assert data['photo_key'] == 'test-image.jpg'
+        assert data['photo_key'] == str(bus.id)
         assert 'fields' in data
 
     async def test_get_upload_url_png(self, session: AsyncSession, client: AsyncClient):
+        bus = await create_test_bus(session)
         payload = {'filename': 'test-image.png', 'content_type': 'image/png'}
 
-        response = await client.post('/buses/upload-url', json=payload)
+        response = await client.post(f'/buses/{bus.id}/upload-url', json=payload)
         assert response.status_code == 200
 
     async def test_get_upload_url_invalid_content_type(self, session: AsyncSession, client: AsyncClient):
+        bus = await create_test_bus(session)
         payload = {'filename': 'test-file.pdf', 'content_type': 'application/pdf'}
 
-        response = await client.post('/buses/upload-url', json=payload)
+        response = await client.post(f'/buses/{bus.id}/upload-url', json=payload)
         assert response.status_code == 422
 
 

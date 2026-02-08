@@ -81,15 +81,16 @@ async def delete_bus(
 
 
 @router.post(
-    '/upload-url',
+    '/{bus_id}/upload-url',
     response_model=PresignedUrlResponse,
 )
 async def get_image_upload_url(
+    bus_id: UUID,
     request: PresignedUrlRequest,
     service: BusService = Depends(),
     _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
 ):
-    return await service.generate_presigned_upload_url(request)
+    return await service.generate_presigned_upload_url(bus_id, request)
 
 
 @router.post(
