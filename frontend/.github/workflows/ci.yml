@@ -1,0 +1,60 @@
+name: Busline CI/CD
+
+on:
+   push:
+      branches: ["main"]
+   pull_request:
+      branches: ["main"]
+
+jobs:
+   quality-assurance:
+      runs-on: ubuntu-latest
+      steps:
+         - name: Checkout
+           uses: actions/checkout@v4
+
+         - name: Setup Bun
+           uses: oven-sh/setup-bun@v2
+           with:
+              bun-version: latest
+
+         - name: Install dependencies
+           run: bun install --frozen-lockfile
+
+         - name: Lint
+           run: bun run lint
+
+         - name: Build
+           run: bun run build
+
+   deploy:
+      runs-on: ubuntu-latest
+      environment: staging
+      needs: quality-assurance
+      if: github.ref == 'refs/heads/main'
+      steps:
+         - name: Deploy to EC2 via SSH
+           uses: appleboy/ssh-action@v1.0.3
+           with:
+              host: ${{ secrets.EC2_HOST }}
+              username: ubuntu
+              key: ${{ secrets.EC2_SSH_KEY }}
+              script: |
+                 if [ ! -d "~/busline-frontend/.git" ]; then
+                 echo "🧹 Cleaning up and cloning..."
+                 rm -rf ~/busline-frontend
+                 git clone git@github.com:${{ github.repository }}.git ~/busline-frontend
+                 fi
+
+                 cd ~/busline-frontend
+
+                 git fetch origin
+                 git reset --hard origin/${{ github.ref_name }}
+
+                 ls -la
+
+                 bun install --frozen-lockfile
+                 bun run build
+                 if command -v pm2 >/dev/null 2>&1; then
+                    pm2 reload busline-frontend || pm2 restart busline-frontend || true
+                 fi
