@@ -40,6 +40,7 @@ jobs:
               username: ubuntu
               key: ${{ secrets.EC2_SSH_KEY }}
               script: |
+                 export PATH=$PATH:/usr/bin:/usr/local/bin
                  export NEXT_TELEMETRY_DISABLED=1
                  export NODE_OPTIONS="--max-old-space-size=1536"
 
@@ -58,6 +59,7 @@ jobs:
                  echo "📦 Installing dependencies and building..."
                  ls -la
                  rm -f bun.lock
+
                  npm install
                  npm run build
 
