@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 from app.common.schemas import EntityModel, Latitude, Longitude, PaginatedResponse, QueryParams
@@ -34,3 +36,20 @@ class CityListResponse(PaginatedResponse[CityRead]):
     """Response model for paginated cities list."""
 
     pass
+
+
+class CitySearchParams(BaseModel):
+    search: str = ''
+    limit: int = Field(10, ge=1, le=100)
+    cursor: UUID | None = None
+
+
+class CitySearchItem(BaseModel):
+    id: UUID
+    name: str
+
+
+class CitySearchResponse(BaseModel):
+    items: list[CitySearchItem]
+    next_cursor: UUID | None = None
+    has_more: bool = False
