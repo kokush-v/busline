@@ -29,6 +29,7 @@ help:
 	@echo "Utilities:"
 	@echo "  make clean            - Remove cache files and directories"
 	@echo "  make open-db-conn     - Open database connection"
+	@echo "  make connect-ec2      - Connect to EC2 instance via SSH"
 	@echo ""
 
 install:
