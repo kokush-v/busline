@@ -37,32 +37,24 @@ class TripService:
         if not params.from_stop_id:
             return query
 
+        date_conditions = []
+        if params.departure_date_from:
+            date_conditions.append(TripStop.departure_time >= params.departure_date_from)
+        if params.departure_date_to:
+            date_conditions.append(TripStop.departure_time <= params.departure_date_to)
+
         from_stop_subq = (
             select(TripStop.trip_id)
             .where(
                 and_(
                     TripStop.stop_id == params.from_stop_id,
                     TripStop.position_index == 1,
+                    *date_conditions,
                 )
             )
             .subquery()
         )
         query = query.where(Trip.id.in_(select(from_stop_subq)))
-
-        if params.departure_date_from or params.departure_date_to:
-            date_conditions = []
-            if params.departure_date_from:
-                date_conditions.append(TripStop.departure_time >= params.departure_date_from)
-            if params.departure_date_to:
-                date_conditions.append(TripStop.departure_time <= params.departure_date_to)
-
-            query = query.join(TripStop, Trip.id == TripStop.trip_id).where(
-                and_(
-                    TripStop.stop_id == params.from_stop_id,
-                    TripStop.position_index == 1,
-                    *date_conditions,
-                )
-            )
 
         return query
 
@@ -88,8 +80,16 @@ class TripService:
     def __apply_sorting(self, query: Select, params: TripQueryParams) -> Select:
         match params.sort_by:
             case TripSortBy.DEPARTURE_TIME:
-                query = query.join(TripStop, Trip.id == TripStop.trip_id).where(TripStop.position_index == 1)
-                sort_column = TripStop.departure_time
+                departure_subq = (
+                    select(
+                        TripStop.trip_id.label('trip_id'),
+                        TripStop.departure_time.label('departure_time'),
+                    )
+                    .where(TripStop.position_index == 1)
+                    .subquery()
+                )
+                query = query.join(departure_subq, Trip.id == departure_subq.c.trip_id)
+                sort_column = departure_subq.c.departure_time
             case TripSortBy.PRICE:
                 sort_column = Trip.price_per_seat
             case TripSortBy.SEATS_LEFT:
@@ -117,7 +117,7 @@ class TripService:
 
     async def get_trips(self, params: TripQueryParams) -> tuple[list[Trip], int]:
         """Get trips with filtering, sorting, and pagination."""
-        query = select(Trip).distinct()
+        query = select(Trip)
 
         query = self.__apply_from_stop_filter(query, params)
         query = self.__apply_to_stop_filter(query, params)
