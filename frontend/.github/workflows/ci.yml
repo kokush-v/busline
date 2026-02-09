@@ -40,21 +40,29 @@ jobs:
               username: ubuntu
               key: ${{ secrets.EC2_SSH_KEY }}
               script: |
-                 if [ ! -d "~/busline-frontend/.git" ]; then
-                 echo "🧹 Cleaning up and cloning..."
-                 rm -rf ~/busline-frontend
-                 git clone git@github.com:${{ github.repository }}.git ~/busline-frontend
+                 export BUN_INSTALL="$HOME/.bun"
+                 export PATH="$BUN_INSTALL/bin:$PATH"
+                 export PATH="$HOME/.bun/bin:$PATH" # Додаємо шлях до встановлених бінарників PM2
+
+                 if [ ! -d "$HOME/busline-frontend/.git" ]; then
+                   echo "🧹 Cleaning up and cloning..."
+                   rm -rf "$HOME/busline-frontend"
+                   git clone git@github.com:${{ github.repository }}.git "$HOME/busline-frontend"
                  fi
 
-                 cd ~/busline-frontend
+                 cd "$HOME/busline-frontend"
 
                  git fetch origin
                  git reset --hard origin/${{ github.ref_name }}
 
-                 ls -la
-
                  bun install --frozen-lockfile
                  bun run build
-                 if command -v pm2 >/dev/null 2>&1; then
-                    pm2 reload busline-frontend || pm2 restart busline-frontend || true
+
+                 PM2_PATH="$HOME/.bun/bin/pm2"
+
+                 if [ -f "$PM2_PATH" ]; then
+                   $PM2_PATH reload busline-frontend || $PM2_PATH restart busline-frontend || $PM2_PATH start "bun run start" --name "busline-frontend"
+                 else
+                   bun add -g pm2
+                   $HOME/.bun/bin/pm2 start "bun run start" --name "busline-frontend"
                  fi
