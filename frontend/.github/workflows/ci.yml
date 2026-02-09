@@ -40,7 +40,12 @@ jobs:
               username: ubuntu
               key: ${{ secrets.EC2_SSH_KEY }}
               script: |
-                 export PATH=$PATH:/usr/bin:/usr/local/bin
+                 export NVM_DIR="$HOME/.nvm"
+                 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+                 nvm install 22
+                 nvm use 22
+
                  export NEXT_TELEMETRY_DISABLED=1
                  export NODE_OPTIONS="--max-old-space-size=1536"
 
@@ -57,7 +62,7 @@ jobs:
                  git reset --hard origin/${{ github.ref_name }}
 
                  echo "📦 Installing dependencies and building..."
-                 ls -la
+                 rm -rf node_modules
                  rm -f bun.lock
 
                  npm install
@@ -65,8 +70,7 @@ jobs:
 
                  echo "🚀 Managing PM2 process..."
                  if ! command -v pm2 >/dev/null 2>&1; then
-                   echo "Installing PM2 globally..."
-                   sudo npm install -g pm2
+                   npm install -g pm2
                  fi
 
                  pm2 reload busline-frontend --update-env || pm2 restart busline-frontend || pm2 start npm --name "busline-frontend" -- start
