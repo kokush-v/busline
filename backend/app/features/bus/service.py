@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import Depends, UploadFile
 import httpx
@@ -164,7 +164,7 @@ class BusService:
     async def generate_presigned_upload_url(self, bus_id: UUID, request: PresignedUrlRequest) -> PresignedUrlResponse:
         await self.get_bus(bus_id)
 
-        photo_key = str(bus_id)
+        photo_key = str(uuid4())
 
         presigned_post = await self._s3_service.generate_presigned_upload_url(
             bucket=self._settings.S3_PHOTOS_BUCKET,
@@ -181,6 +181,9 @@ class BusService:
 
     async def update_media_urls(self, bus_id: UUID, photo_key: str) -> Bus:
         bus = await self.get_bus(bus_id)
+
+        await self._s3_service.validate_object_access(self._settings.S3_PHOTOS_BUCKET, photo_key)
+        await self._s3_service.validate_object_access(self._settings.S3_THUMBNAILS_BUCKET, photo_key)
 
         await self._delete_old_media(bus)
 
@@ -210,7 +213,14 @@ class BusService:
             if photo_key:
                 await self._s3_service.delete_object(self._settings.S3_PHOTOS_BUCKET, photo_key)
 
-        stmt = update(Bus).where(Bus.id == bus_id).values(photo_url=None).returning(Bus)
+        if bus.thumbnail_url:
+            thumbnail_key = self._s3_service.extract_key_from_url(
+                bus.thumbnail_url, self._settings.S3_THUMBNAILS_BUCKET
+            )
+            if thumbnail_key:
+                await self._s3_service.delete_object(self._settings.S3_THUMBNAILS_BUCKET, thumbnail_key)
+
+        stmt = update(Bus).where(Bus.id == bus_id).values(photo_url=None, thumbnail_url=None).returning(Bus)
         await self._session.execute(stmt)
         await self._session.commit()
 
