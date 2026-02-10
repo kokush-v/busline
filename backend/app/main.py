@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import FastAPI
-from starlette.middleware.cors import CORSMiddleware
 import structlog
 
 from app.core.exeptions import setup_exceptions_handler
@@ -26,14 +25,6 @@ def get_application(include_middlewares: bool = True) -> FastAPI:
         title='Busline API',
         version='1.0.0',
         description='API for Busline application',
-    )
-
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=['*'],
-        allow_credentials=True,
-        allow_methods=['*'],
-        allow_headers=['*'],
     )
 
     setup_exceptions_handler(application)
