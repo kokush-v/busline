@@ -1,15 +1,24 @@
-from fastapi import APIRouter, Depends, status
+from uuid import UUID
 
-from app.core.aws.cognito import CognitoService, get_cognito_service
+from fastapi import APIRouter, Depends, status
+from fastapi.security import HTTPAuthorizationCredentials
+
+from app.core.aws.cognito import CognitoService, get_cognito_service, security
 from app.features.auth.schemas import (
     AuthCode,
     AuthResponse,
+    CognitoUser,
     ConfirmSignUpRequest,
     LoginRequest,
     RefreshTokenRequest,
     SignUpRequest,
     TokenResponse,
 )
+from app.features.user.enums import UserRoleGroups
+from app.features.user.schemas import UserRead
+from app.features.user.service import UserService
+
+cognito_service = get_cognito_service()
 
 router = APIRouter(prefix='/auth', tags=['Authentication'])
 
@@ -79,3 +88,22 @@ async def refresh_tokens(
         refresh_token=payload.refresh_token,
         expires_in=auth_result.get('ExpiresIn'),
     )
+
+
+@router.get('/profile', response_model=UserRead)
+async def get_profile(
+    service: UserService = Depends(),
+    user: CognitoUser = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN, UserRoleGroups.USER])),
+):
+    """Get current user profile from DB without joins."""
+    return await service.get_user(user_id=UUID(user.sub))
+
+
+@router.post('/sign-out', status_code=status.HTTP_204_NO_CONTENT)
+async def sign_out(
+    auth: HTTPAuthorizationCredentials = Depends(security),
+    _: CognitoUser = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN, UserRoleGroups.USER])),
+    cognito: CognitoService = Depends(get_cognito_service),
+):
+    """Sign out user globally in Cognito using access token."""
+    await cognito.sign_out(auth.credentials)
