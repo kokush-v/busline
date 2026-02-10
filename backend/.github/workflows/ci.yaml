@@ -45,23 +45,32 @@ jobs:
               key: ${{ secrets.EC2_SSH_KEY }}
               script: |
                  if [ ! -d "~/busline-backend/.git" ]; then
-                 echo "🧹 Cleaning up and cloning..."
-                 rm -rf ~/busline-backend
-                 git clone git@github.com:${{ github.repository }}.git ~/busline-backend
+                   echo "🧹 Cleaning up and cloning..."
+                   rm -rf ~/busline-backend
+                   git clone git@github.com:${{ github.repository }}.git ~/busline-backend
                  fi
 
                  cd ~/busline-backend
-
                  git fetch origin
                  git reset --hard origin/${{ github.ref_name }}
 
-                 ls -la
-
                  cp .env.staging .env
 
+                 if [ ! -f /etc/docker/daemon.json ] || ! grep -q "8.8.8.8" /etc/docker/daemon.json; then
+                   echo '{"dns": ["8.8.8.8", "1.1.1.1"]}' | sudo tee /etc/docker/daemon.json
+                   sudo systemctl restart docker
+                 fi
+
                  docker build -t busline-app .
+
                  docker stop busline-container || true
                  docker rm busline-container || true
 
                  docker run --rm --net=host --env-file .env busline-app make migrate
-                 docker run -d --name busline-container --net=host --env-file .env --restart unless-stopped busline-app
+
+                 docker run -d \
+                   --name busline-container \
+                   --net=host \
+                   --env-file .env \
+                   --restart unless-stopped \
+                   busline-app
