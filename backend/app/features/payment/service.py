@@ -73,6 +73,7 @@ class PaymentService:
         updated_order = (await self._session.execute(update_order_stmt)).scalar_one()
 
         await self._update_seats_status(order_id, SeatStatus.FREE)
+        await self._order_service._delete_order_tickets(order_id)
         return updated_order
 
     async def _handle_cancelled_payment(self, order_id, webhook_updates: dict) -> Order:
@@ -82,6 +83,7 @@ class PaymentService:
         updated_order = (await self._session.execute(update_order_stmt)).scalar_one()
 
         await self._update_seats_status(order_id, SeatStatus.FREE)
+        await self._order_service._delete_order_tickets(order_id)
         return updated_order
 
     @transactional

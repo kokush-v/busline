@@ -1,9 +1,12 @@
-from uuid import uuid4
+from unittest.mock import AsyncMock, patch
+from uuid import UUID, uuid4
 
 from httpx import AsyncClient
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.aws.s3_service import S3Service
+from app.core.exeptions.s3 import S3Exception
 from app.features.bus.schemas import BusRead
 from app.features.bus.service import BusService
 from tests.factories import BusCreateFactory
@@ -169,7 +172,8 @@ class TestBusesPresignedUrl:
 
         data = response.json()
         assert 'upload_url' in data
-        assert data['photo_key'] == str(bus.id)
+        assert 'photo_key' in data
+        UUID(data['photo_key'])  # validate it's a valid UUID
         assert 'fields' in data
 
     async def test_get_upload_url_png(self, session: AsyncSession, client: AsyncClient):
@@ -190,14 +194,24 @@ class TestBusesPresignedUrl:
 class TestBusesImageSave:
     async def test_save_image_success(self, session: AsyncSession, client: AsyncClient):
         bus = await create_test_bus(session)
-        payload = {'photo_key': 'buses/test-image.jpg'}
+        photo_key = 'buses/test-image.jpg'
 
-        response = await client.post(f'/buses/{bus.id}/image/save', json=payload)
+        with patch.object(S3Service, 'validate_object_access', new_callable=AsyncMock):
+            response = await client.post(f'/buses/{bus.id}/image/save', json={'photo_key': photo_key})
         assert response.status_code == 200
 
         updated_bus = BusRead.model_validate(response.json())
         assert updated_bus.photo_url is not None
         assert 'test-image.jpg' in updated_bus.photo_url
+
+    async def test_save_image_thumbnail_missing(self, session: AsyncSession, client: AsyncClient):
+        bus = await create_test_bus(session)
+        photo_key = f'buses/{uuid4()}.jpg'
+
+        mock = AsyncMock(side_effect=[None, S3Exception(status=404, message='File not found in S3')])
+        with patch.object(S3Service, 'validate_object_access', mock):
+            response = await client.post(f'/buses/{bus.id}/image/save', json={'photo_key': photo_key})
+        assert response.status_code == 404
 
     async def test_save_image_not_found(self, session: AsyncSession, client: AsyncClient):
         payload = {'photo_key': 'buses/test-image.jpg'}
