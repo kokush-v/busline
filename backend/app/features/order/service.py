@@ -3,7 +3,7 @@ import logging
 from uuid import UUID
 
 from fastapi import Depends
-from sqlalchemy import desc, func, insert, select, update
+from sqlalchemy import delete, desc, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.db import get_db_session
@@ -97,6 +97,12 @@ class OrderService:
         seat_ids_subquery = select(Ticket.seat_id).where(Ticket.order_id == order_id)
         update_seats_stmt = update(Seat).where(Seat.id.in_(seat_ids_subquery)).values(status=SeatStatus.FREE)
         await self._session.execute(update_seats_stmt)
+
+        await self._delete_order_tickets(order_id)
+
+    async def _delete_order_tickets(self, order_id: UUID) -> None:
+        delete_stmt = delete(Ticket).where(Ticket.order_id == order_id)
+        await self._session.execute(delete_stmt)
 
     async def get_order_tickets(self, order_id: UUID) -> list[Ticket]:
         stmt = select(Ticket).join(Order, Ticket.order_id == Order.id).where(Order.id == order_id)

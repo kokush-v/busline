@@ -10,7 +10,14 @@ from app.core.exeptions import ServerException
 from app.database.db import get_db_session
 from app.features.city.enums import CitySortBy
 from app.features.city.models import City
-from app.features.city.schemas import CityCreate, CityQueryParams, CityUpdate
+from app.features.city.schemas import (
+    CityCreate,
+    CityQueryParams,
+    CitySearchItem,
+    CitySearchParams,
+    CitySearchResponse,
+    CityUpdate,
+)
 from app.utils.decorators import transactional
 
 
@@ -104,3 +111,33 @@ class CityService:
         await self.get_city(city_id)
         stmt = delete(City).where(City.id == city_id)
         await self._session.execute(stmt)
+
+    async def search_cities(self, params: CitySearchParams) -> CitySearchResponse:
+        """Search cities with cursor-based pagination (keyset pagination)."""
+        query = select(City)
+
+        if params.search:
+            query = query.where(City.name.ilike(f'%{params.search}%'))
+
+        if params.cursor:
+            last_city = await self._session.execute(select(City.name).where(City.id == params.cursor))
+            last_city_name = last_city.scalar_one_or_none()
+            if last_city_name is not None:
+                query = query.where(
+                    (City.name > last_city_name) | ((City.name == last_city_name) & (City.id > params.cursor))
+                )
+
+        query = query.order_by(asc(City.name), asc(City.id))
+        query = query.limit(params.limit + 1)
+
+        result = await self._session.execute(query)
+        cities = list(result.scalars().all())
+
+        has_more = len(cities) > params.limit
+        if has_more:
+            cities = cities[: params.limit]
+
+        items = [CitySearchItem(id=city.id, name=city.name) for city in cities]
+        next_cursor = items[-1].id if has_more and items else None
+
+        return CitySearchResponse(items=items, next_cursor=next_cursor, has_more=has_more)
