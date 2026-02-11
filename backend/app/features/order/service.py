@@ -3,13 +3,13 @@ import logging
 from uuid import UUID
 
 from fastapi import Depends
-from sqlalchemy import insert, select, update
+from sqlalchemy import desc, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.db import get_db_session
 from app.features.order.enums import OrderStatus
 from app.features.order.models import Order
-from app.features.order.schemas import OrderCreate
+from app.features.order.schemas import OrderCreate, OrderQueryParams
 from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.ticket.models import Ticket
@@ -30,10 +30,31 @@ class OrderService:
         result = await self._session.execute(select(Order).where(Order.id == order_id))
         return result.scalars().one()
 
-    async def get_user_orders(self, user_id: UUID) -> list[Order]:
-        result = await self._session.execute(select(Order).where(Order.user_id == user_id))
-        orders = result.scalars().all()
-        return orders
+    async def get_user_orders(self, user_id: UUID, params: OrderQueryParams) -> tuple[list[Order], int]:
+        query = select(Order).where(Order.user_id == user_id)
+        query = self.__apply_status_filter(query, params)
+
+        total = await self.__get_total_count(query)
+
+        query = query.order_by(desc(Order.created_at))
+        query = self.__apply_pagination(query, params)
+
+        result = await self._session.execute(query)
+        orders = list(result.scalars().all())
+        return orders, total
+
+    def __apply_status_filter(self, query, params: OrderQueryParams):
+        if params.statuses:
+            query = query.where(Order.status.in_(params.statuses))
+        return query
+
+    async def __get_total_count(self, query) -> int:
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self._session.execute(count_query)
+        return total_result.scalar_one()
+
+    def __apply_pagination(self, query, params: OrderQueryParams):
+        return query.limit(params.limit).offset(params.offset)
 
     async def _create_order(self, payload: OrderCreate, user_id: UUID) -> Order:
         order_stmt = insert(Order).values(**payload.model_dump(), user_id=user_id).returning(Order)

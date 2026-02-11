@@ -27,6 +27,7 @@ class User(Base):
 
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    phone_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     role: Mapped[UserRoleGroups] = mapped_column(
         Enum(UserRoleGroups, name='userrole'),

@@ -70,14 +70,12 @@ def setup_exceptions_handler(app: FastAPI) -> None:
         _log_error_to_file(request, exc)
         return JSONResponse(
             status_code=exc.status,
-            content={
-                'error': ErrorSchema(
-                    message=exc.message,
-                    code=exc.code.value if exc.code else None,
-                    details=exc.details,
-                    timestamp=exc.timestamp.isoformat(),
-                ).model_dump()
-            },
+            content=ErrorSchema(
+                message=exc.message,
+                code=exc.code.value if exc.code else None,
+                details=exc.details,
+                timestamp=exc.timestamp.isoformat(),
+            ).model_dump(),
         )
 
     @app.exception_handler(NoResultFound)

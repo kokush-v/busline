@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.common.schemas import EntityModel
+from app.common.schemas import EntityModel, PaginatedResponse
 from app.features.order.enums import OrderStatus
 
 
@@ -38,3 +38,17 @@ class OrderUpdate(BaseModel):
 class OrderPaymentResponse(BaseModel):
     order_id: UUID
     message: str
+
+
+class OrderQueryParams(BaseModel):
+    """Query parameters for filtering user orders."""
+
+    limit: int = Field(10, ge=1, le=100, description='Number of items per page')
+    offset: int = Field(0, ge=0, description='Number of items to skip')
+    statuses: list[OrderStatus] | None = Field(None, description='Filter by status values')
+
+
+class OrderListResponse(PaginatedResponse[OrderRead]):
+    """Response model for paginated orders list."""
+
+    pass
