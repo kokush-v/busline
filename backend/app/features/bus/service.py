@@ -1,3 +1,4 @@
+from asyncio import TaskGroup
 from uuid import UUID, uuid4
 
 from fastapi import Depends, UploadFile
@@ -182,8 +183,13 @@ class BusService:
     async def update_media_urls(self, bus_id: UUID, photo_key: str) -> Bus:
         bus = await self.get_bus(bus_id)
 
-        await self._s3_service.validate_object_access(self._settings.S3_PHOTOS_BUCKET, photo_key)
-        await self._s3_service.validate_object_access(self._settings.S3_THUMBNAILS_BUCKET, photo_key)
+        async with TaskGroup() as tg:
+            funcs = [
+                self._s3_service.validate_object_access(self._settings.S3_PHOTOS_BUCKET, photo_key),
+                self._s3_service.validate_object_access(self._settings.S3_THUMBNAILS_BUCKET, photo_key),
+            ]
+            for func in funcs:
+                tg.create_task(func)
 
         await self._delete_old_media(bus)
 
