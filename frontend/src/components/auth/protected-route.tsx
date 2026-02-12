@@ -1,25 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-provider";
+import { routes } from "@/lib/routes";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-	const { isAuthenticated, isLoading } = useAuth();
-	const router = useRouter();
-	const pathname = usePathname();
-	const searchParams = useSearchParams();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-	useEffect(() => {
-		if (!isLoading && !isAuthenticated) {
-			const next = `${pathname}${searchParams.toString() ? `?${searchParams}` : ""}`;
-			router.replace(`/login?next=${encodeURIComponent(next)}`);
-		}
-	}, [isAuthenticated, isLoading, pathname, router, searchParams]);
+  if (!isAuthenticated) {
+    const next = `${pathname}${searchParams.toString() ? `?${searchParams}` : ""}`;
+    router.replace(`${routes.login}?next=${encodeURIComponent(next)}`);
+    return null;
+  }
 
-	if (!isAuthenticated) {
-		return null;
-	}
-
-	return <>{children}</>;
+  return <>{children}</>;
 }

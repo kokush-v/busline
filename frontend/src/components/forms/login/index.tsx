@@ -17,12 +17,12 @@ import { loginSchema, type LoginFormValues } from "./schema";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isLoading } = useAuth();
+  const { login } = useAuth();
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     setValue,
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -77,7 +77,7 @@ export function LoginForm() {
           Remember me
         </label>
       </div>
-      <Button className="w-full" type="submit" disabled={isLoading}>
+      <Button className="w-full" type="submit" disabled={isSubmitting}>
         Sign in
       </Button>
     </form>

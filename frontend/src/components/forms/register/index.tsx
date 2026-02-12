@@ -15,12 +15,12 @@ import { registerSchema, type RegisterFormValues } from "./schema";
 
 export function RegisterForm() {
   const router = useRouter();
-  const { register: registerUser, isLoading } = useAuth();
+  const { register: registerUser } = useAuth();
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
   });
@@ -70,7 +70,7 @@ export function RegisterForm() {
           {...register("confirmPassword")}
         />
       </FormField>
-      <Button className="w-full" type="submit" disabled={isLoading}>
+      <Button className="w-full" type="submit" disabled={isSubmitting}>
         Create account
       </Button>
     </form>

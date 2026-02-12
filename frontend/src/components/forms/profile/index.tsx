@@ -1,6 +1,5 @@
 "use client";
 
-import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
 
@@ -11,22 +10,13 @@ type ProfileFormValues = {
 };
 
 export function ProfileForm() {
-  const { user, isLoading } = useAuth();
+  const { user } = useAuth();
 
   const profileValues: ProfileFormValues = {
     name: user?.name ?? "—",
     email: user?.email ?? "—",
     phone: user?.phone_number ?? "—",
   };
-
-  if (isLoading) {
-    return (
-      <div className="text-muted-foreground flex items-center gap-2 text-sm">
-        <Spinner />
-        Loading profile details…
-      </div>
-    );
-  }
 
   if (!user) {
     return (

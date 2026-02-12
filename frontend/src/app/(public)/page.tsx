@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageContainer } from "@/components/ui/page-container";
 import { routes } from "@/lib/routes";
 
 const features = [
@@ -26,7 +27,7 @@ const features = [
 
 export default function HomePage() {
   return (
-    <main className="bg-background min-h-screen">
+    <PageContainer centered={false} className="px-0 py-0">
       <section className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-16 lg:flex-row lg:items-center">
         <div className="flex-1 space-y-6">
           <p className="text-muted-foreground text-sm font-medium">
@@ -64,6 +65,6 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-    </main>
+    </PageContainer>
   );
 }

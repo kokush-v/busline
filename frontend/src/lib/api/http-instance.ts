@@ -1,4 +1,4 @@
-import { isBrowser } from "@/utils/common";
+import { getAccessToken } from "@/utils/auth";
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { getErrorMessage } from "./error-handler";
 
@@ -25,9 +25,7 @@ export const httpInstance = <T>(
   options?: AxiosRequestConfig,
 ): Promise<T> => {
   const source = axios.CancelToken.source();
-  const token = isBrowser()
-    ? (localStorage.getItem("token") ?? sessionStorage.getItem("token"))
-    : null;
+  const token = getAccessToken();
 
   const promise = AXIOS_INSTANCE({
     ...config,
