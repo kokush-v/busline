@@ -1,17 +1,8 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type {
-  AuthResponse,
   ConfirmSignUpRequest,
   LoginRequest,
   SignUpRequest,
@@ -27,83 +18,52 @@ import {
   postSignUp,
 } from "@/generated/api/endpoints/authentication/authentication";
 import type { StoredAuth } from "@/types/auth";
-import {
-  clearStoredAuth,
-  readStoredAuth,
-  writeStoredAuth,
-} from "@/utils/auth";
+import { clearStoredAuth, readStoredAuth, writeStoredAuth } from "@/utils/auth";
 import { PageSkeleton } from "@/components/page-skeleton";
-
-type AuthContextValue = {
-  user: UserRead | null;
-  accessToken: string | null;
-  refreshToken: string | null;
-  isAuthenticated: boolean;
-  login: (
-    payload: LoginRequest & { rememberMe?: boolean },
-  ) => Promise<TokenResponse>;
-  register: (payload: SignUpRequest) => Promise<AuthResponse>;
-  verify: (payload: ConfirmSignUpRequest) => Promise<AuthResponse>;
-  refresh: () => Promise<TokenResponse | null>;
-  logout: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextValue | null>(null);
-
-const buildSession = (
-  tokens: TokenResponse,
-  fallbackUser?: UserRead | null,
-) => {
-  const accessToken = tokens.access_token;
-  const refreshToken = tokens.refresh_token ?? null;
-  const expiresAt = tokens.expires_in
-    ? Date.now() + tokens.expires_in * 1000
-    : undefined;
-  return { accessToken, refreshToken, expiresAt, user: fallbackUser ?? null };
-};
+import { AuthContext } from "./context";
+import { buildSession, refreshTokensAndFetchProfile } from "./utils";
+import type { AuthContextValue } from "./types";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Use Query for initial auth state with loading indicator
   const { data: initialAuth, isLoading } = useQuery({
     queryKey: ["auth", "session"],
     queryFn: async (): Promise<StoredAuth | null> => {
-      try {
-        const stored = readStoredAuth();
-        if (!stored?.accessToken) return null;
+      const stored = readStoredAuth();
+      if (!stored?.accessToken) return null;
 
-        if (
-          stored.expiresAt &&
-          stored.expiresAt <= Date.now() &&
-          stored.refreshToken
-        ) {
-          const refreshed = await postRefreshTokens({
-            refresh_token: stored.refreshToken,
-          });
-          const profile = await getProfile();
-
-          const updatedAuth: StoredAuth = {
-            user: profile,
-            accessToken: refreshed.access_token,
-            refreshToken: refreshed.refresh_token ?? null,
-            expiresAt: refreshed.expires_in
-              ? Date.now() + refreshed.expires_in * 1000
-              : undefined,
-            rememberMe: stored.rememberMe,
-          };
-
-          writeStoredAuth(updatedAuth);
-          return updatedAuth;
+      const tryRefresh = async (): Promise<StoredAuth | null> => {
+        if (!stored.refreshToken) {
+          clearStoredAuth();
+          return null;
         }
+        try {
+          return await refreshTokensAndFetchProfile(
+            stored.refreshToken,
+            stored.rememberMe ?? false,
+          );
+        } catch {
+          clearStoredAuth();
+          return null;
+        }
+      };
 
+      const isExpired = stored.expiresAt && stored.expiresAt <= Date.now();
+      if (isExpired) {
+        return await tryRefresh();
+      }
+
+      try {
         const profile = await getProfile();
         const updatedAuth: StoredAuth = {
           ...stored,
           user: profile,
         };
         writeStoredAuth(updatedAuth);
-
         return updatedAuth;
       } catch {
+        if (stored.rememberMe) {
+          return await tryRefresh();
+        }
         clearStoredAuth();
         return null;
       }
@@ -121,7 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   const rememberMeRef = useRef(false);
 
-  // Update states when initialAuth is loaded
   useEffect(() => {
     if (initialAuth) {
       setUser(initialAuth.user ?? null);
@@ -174,31 +133,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [scheduleRefresh],
   );
 
-  const fetchAndStoreProfile = useCallback(
-    async (
-      token: string,
-      refreshValue: string | null,
-      rememberMe: boolean,
-      expiresAt?: number,
-    ) => {
+  const applyAuthWithProfile = useCallback(
+    async (tokens: TokenResponse, rememberMe: boolean) => {
+      const session = applyAuth(tokens, rememberMe);
+
       try {
         const profile = await getProfile();
         setUser(profile);
-        setAccessToken(token);
-        setRefreshToken(refreshValue ?? null);
-        writeStoredAuth({
-          user: profile,
-          accessToken: token,
-          refreshToken: refreshValue ?? null,
-          expiresAt,
-          rememberMe,
-        });
-        scheduleRefresh({ expiresAt, refreshToken: refreshValue ?? null });
-      } catch {
-        // ignore profile fetch errors
-      }
+        const stored = readStoredAuth();
+        if (stored) {
+          writeStoredAuth({ ...stored, user: profile });
+        }
+      } catch {}
+
+      return session;
     },
-    [scheduleRefresh],
+    [applyAuth],
   );
 
   const handleLogin = useCallback(
@@ -208,17 +158,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       rememberMe,
     }: LoginRequest & { rememberMe?: boolean }) => {
       const tokens = await postLogin({ email, password });
-      const session = applyAuth(tokens, Boolean(rememberMe));
       rememberMeRef.current = Boolean(rememberMe);
-      await fetchAndStoreProfile(
-        session.accessToken,
-        session.refreshToken ?? null,
-        Boolean(rememberMe),
-        session.expiresAt,
-      );
+      await applyAuthWithProfile(tokens, Boolean(rememberMe));
       return tokens;
     },
-    [applyAuth, fetchAndStoreProfile],
+    [applyAuthWithProfile],
   );
 
   const handleRegister = useCallback(async (payload: SignUpRequest) => {
@@ -236,15 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!tokenToUse) return null;
     const rememberMe = stored?.rememberMe ?? rememberMeRef.current;
     const refreshed = await postRefreshTokens({ refresh_token: tokenToUse });
-    const session = applyAuth(refreshed, rememberMe, stored?.user ?? user);
-    await fetchAndStoreProfile(
-      session.accessToken,
-      session.refreshToken,
-      rememberMe,
-      session.expiresAt,
-    );
+    await applyAuthWithProfile(refreshed, rememberMe);
     return refreshed;
-  }, [applyAuth, fetchAndStoreProfile, refreshToken, user]);
+  }, [applyAuthWithProfile, refreshToken]);
 
   useEffect(() => {
     refreshFnRef.current = handleRefresh;
@@ -264,7 +202,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [accessToken, clearRefreshTimer]);
 
-  // Schedule refresh on mount if we have initial auth
   useEffect(() => {
     if (initialAuth) {
       scheduleRefresh({
@@ -306,10 +243,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
-}
+export { useAuth } from "./use-auth";
+export type { AuthContextValue } from "./types";

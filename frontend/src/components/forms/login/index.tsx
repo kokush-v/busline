@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/components/auth/auth-provider";
+import { useAuth } from "@/components/auth/auth-provider/use-auth";
 import { getErrorMessage } from "@/lib/api/error-handler";
 import { routes } from "@/lib/routes";
 import { loginSchema, type LoginFormValues } from "./schema";

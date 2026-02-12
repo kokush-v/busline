@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/components/auth/auth-provider";
+import { useAuth } from "@/components/auth/auth-provider/use-auth";
 import { routes } from "@/lib/routes";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
