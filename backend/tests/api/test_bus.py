@@ -38,7 +38,7 @@ class TestBusesCreate:
 
         response = await client.post('/buses', json=payload)
         assert response.status_code == 400
-        assert response.json()['error']['message'] == 'Bus with this number plate already exists'
+        assert response.json()['message'] == 'Bus with this number plate already exists'
 
     async def test_fail_negative_seats(self, session: AsyncSession, client: AsyncClient):
         payload = BusCreateFactory.build().model_dump()
@@ -144,7 +144,7 @@ class TestBusesUpdate:
 
         response = await client.put(f'/buses/{bus2.id}', json=payload)
         assert response.status_code == 400
-        assert response.json()['error']['message'] == 'Bus with this number plate already exists'
+        assert response.json()['message'] == 'Bus with this number plate already exists'
 
 
 class TestBusesDelete:
