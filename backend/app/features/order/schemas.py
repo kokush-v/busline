@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.common.schemas import EntityModel, PaginatedResponse
-from app.features.order.enums import OrderStatus
+from app.features.order.enums import OrderStatus, ProfileOrderFilterEnum
 
 
 class OrderBase(BaseModel):
@@ -45,7 +45,9 @@ class OrderQueryParams(BaseModel):
 
     limit: int = Field(10, ge=1, le=100, description='Number of items per page')
     offset: int = Field(0, ge=0, description='Number of items to skip')
-    statuses: list[OrderStatus] | None = Field(None, description='Filter by status values')
+    filter: ProfileOrderFilterEnum = Field(
+        ProfileOrderFilterEnum.ALL, description='Filter orders by status category'
+    )
 
 
 class OrderListResponse(PaginatedResponse[OrderRead]):

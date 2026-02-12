@@ -44,8 +44,9 @@ class OrderService:
         return orders, total
 
     def __apply_status_filter(self, query, params: OrderQueryParams):
-        if params.statuses:
-            query = query.where(Order.status.in_(params.statuses))
+        statuses = params.filter.get_statuses()
+        if statuses:
+            query = query.where(Order.status.in_(statuses))
         return query
 
     async def __get_total_count(self, query) -> int:
