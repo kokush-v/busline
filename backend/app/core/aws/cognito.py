@@ -140,6 +140,19 @@ class CognitoService:
                 details={'error_code': error_code},
             ) from e
 
+    async def sign_out(self, access_token: str) -> None:
+        """Invalidate user session in Cognito using access token."""
+        try:
+            async with self._session.client('cognito-idp', region_name=self.region) as client:
+                await client.global_sign_out(AccessToken=access_token)
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            raise ServerException(
+                message=e.response['Error']['Message'],
+                status=400,
+                details={'error_code': error_code},
+            ) from e
+
     async def verify_token(self, token: str) -> CognitoUser | None:
         """Validate JWT and return payload."""
         try:

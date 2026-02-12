@@ -34,7 +34,7 @@ class TestCitiesCreate:
 
         response = await client.post('/cities', json=payload)
         assert response.status_code == 400
-        assert response.json()['error']['message'] == 'City with this name already exists'
+        assert response.json()['message'] == 'City with this name already exists'
 
     async def test_fail_invalid_longitude(self, session: AsyncSession, client: AsyncClient):
         payload = CityCreateFactory.build().model_dump()
@@ -111,7 +111,7 @@ class TestCitiesUpdate:
 
         response = await client.put(f'/cities/{city2.id}', json=payload)
         assert response.status_code == 400
-        assert response.json()['error']['message'] == 'City with this name already exists'
+        assert response.json()['message'] == 'City with this name already exists'
 
 
 class TestCitiesDelete:

@@ -145,7 +145,7 @@ class TestSeatReservation:
         # Try to reserve same seat again
         response2 = await create_reservation(client, trip.id, seats[:1], stop1.id, stop2.id)
         assert response2.status_code == 409
-        assert 'not available' in response2.json()['error']['message']
+        assert 'not available' in response2.json()['message']
 
     async def test_reserve_trip_not_found(self, session: AsyncSession, client: AsyncClient):
         fake_trip_id = uuid4()
@@ -178,4 +178,4 @@ class TestSeatReservation:
 
         response = await client.post('/seats/reserve', json=payload)
         assert response.status_code == 409
-        assert 'do not exist' in response.json()['error']['message']
+        assert 'do not exist' in response.json()['message']

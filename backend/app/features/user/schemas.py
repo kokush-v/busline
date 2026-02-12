@@ -15,6 +15,7 @@ class UserQueryParams(QueryParams):
 class UserBase(BaseModel):
     email: EmailStr
     name: str | None = Field(None, max_length=255)
+    phone_number: str | None = Field(None, max_length=20)
 
 
 class UserCreate(UserBase):

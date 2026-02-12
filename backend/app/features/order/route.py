@@ -5,7 +5,7 @@ import httpx
 
 from app.core.aws.cognito import get_cognito_service
 from app.features.auth.schemas import CognitoUser
-from app.features.order.schemas import OrderPaymentResponse, OrderRead
+from app.features.order.schemas import OrderListResponse, OrderPaymentResponse, OrderQueryParams, OrderRead
 from app.features.order.service import OrderService
 from app.features.ticket.schemas import TicketRead
 from app.features.user.enums import UserRoleGroups
@@ -77,9 +77,16 @@ async def get_order_tickets(
     return await service.get_order_tickets(order_id)
 
 
-@router.get('/')
+@router.get('/', response_model=OrderListResponse)
 async def get_user_orders(
     service: OrderService = Depends(),
+    params: OrderQueryParams = Depends(),
     user: CognitoUser = Depends(cognito_service.roles_required([UserRoleGroups.USER])),
 ):
-    return await service.get_user_orders(user_id=user.sub)
+    orders, total = await service.get_user_orders(user_id=user.sub, params=params)
+    return OrderListResponse(
+        items=orders,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )

@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 import structlog
 
 from app.core.exeptions import setup_exceptions_handler
@@ -15,7 +16,9 @@ from app.features.ticket.route import router as ticket_router
 from app.features.trip.route import router as trip_router
 from app.features.user.route import router as user_router
 from app.middlewares.logging_middleware import LoggingMiddleware
+from app.settings.env import get_env_settings
 
+settings = get_env_settings()
 logger = structlog.get_logger()
 logging_logger = logging.getLogger('api')
 
@@ -27,6 +30,14 @@ def get_application(include_middlewares: bool = True) -> FastAPI:
         description='API for Busline application',
     )
 
+    if settings.ENVIRONMENT == 'dev':
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=['*'],
+            allow_credentials=True,
+            allow_methods=['*'],
+            allow_headers=['*'],
+        )
     setup_exceptions_handler(application)
 
     if include_middlewares:
