@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import type {
   ConfirmSignUpRequest,
   LoginRequest,
@@ -24,10 +25,20 @@ import { AuthContext } from "./context";
 import { buildSession, refreshTokensAndFetchProfile } from "./utils";
 import type { AuthContextValue } from "./types";
 
+function isAuthError(error: unknown): boolean {
+  return (
+    error instanceof AxiosError &&
+    (error.response?.status === 401 || error.response?.status === 403)
+  );
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [authError, setAuthError] = useState<Error | null>(null);
+
   const { data: initialAuth, isLoading } = useQuery({
     queryKey: ["auth", "session"],
     queryFn: async (): Promise<StoredAuth | null> => {
+      setAuthError(null);
       const stored = readStoredAuth();
       if (!stored?.accessToken) return null;
 
@@ -41,9 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             stored.refreshToken,
             stored.rememberMe ?? false,
           );
-        } catch {
+        } catch (error) {
           clearStoredAuth();
-          return null;
+          if (isAuthError(error)) return null;
+          throw error;
         }
       };
 
@@ -60,16 +72,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         writeStoredAuth(updatedAuth);
         return updatedAuth;
-      } catch {
-        if (stored.rememberMe) {
-          return await tryRefresh();
+      } catch (error) {
+        if (isAuthError(error)) {
+          if (stored.rememberMe) {
+            return await tryRefresh();
+          }
+          clearStoredAuth();
+          return null;
         }
-        clearStoredAuth();
-        return null;
+        // Server error (500+) — don't block the app, return session without user
+        setAuthError(
+          error instanceof Error ? error : new Error("Failed to load profile"),
+        );
+        return { ...stored, user: null };
       }
     },
     staleTime: Infinity,
     gcTime: Infinity,
+    retry: (failureCount, error) => {
+      if (isAuthError(error)) return false;
+      return failureCount < 2;
+    },
   });
 
   const [user, setUser] = useState<UserRead | null>(null);
@@ -218,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       accessToken,
       refreshToken,
       isAuthenticated: Boolean(accessToken),
+      authError,
       login: handleLogin,
       register: handleRegister,
       verify: handleVerify,
@@ -228,6 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       accessToken,
       refreshToken,
+      authError,
       handleLogin,
       handleRegister,
       handleVerify,
@@ -243,5 +268,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export { useAuth } from "./use-auth";
 export type { AuthContextValue } from "./types";

@@ -36,12 +36,15 @@ export const refreshTokensAndFetchProfile = async (
   };
   writeStoredAuth(refreshedAuth);
 
-  const profile = await getProfile();
-  const updatedAuth: StoredAuth = {
-    ...refreshedAuth,
-    user: profile,
-  };
-  writeStoredAuth(updatedAuth);
-
-  return updatedAuth;
+  try {
+    const profile = await getProfile();
+    const updatedAuth: StoredAuth = {
+      ...refreshedAuth,
+      user: profile,
+    };
+    writeStoredAuth(updatedAuth);
+    return updatedAuth;
+  } catch {
+    return refreshedAuth;
+  }
 };

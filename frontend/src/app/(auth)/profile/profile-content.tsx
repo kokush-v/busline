@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
@@ -11,16 +13,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useAuth } from "@/components/auth/auth-provider/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { routes } from "@/lib/routes";
+import { UserRoleGroups } from "@/generated/api/model";
+import Link from "next/link";
 
 export function ProfilePageContent({
   children,
 }: {
   children: [React.ReactNode, React.ReactNode];
 }) {
-  const { logout } = useAuth();
+  const { logout, user, authError } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleSignOut = async () => {
     try {
@@ -32,6 +37,26 @@ export function ProfilePageContent({
   };
 
   const [profileForm, orderHistory] = children;
+
+  if (authError) {
+    return (
+      <main className="bg-background min-h-screen px-6 py-10">
+        <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3 text-center">
+          <Text role="muted">{authError.message}</Text>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() =>
+              queryClient.invalidateQueries({ queryKey: ["auth", "session"] })
+            }
+            aria-label="Try again"
+          >
+            <RefreshCwIcon />
+          </Button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="bg-background min-h-screen px-6 py-10">
@@ -46,6 +71,21 @@ export function ProfilePageContent({
           </Button>
         </div>
 
+        {user?.role === UserRoleGroups.ADMIN && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Admin Panel</CardTitle>
+              <CardDescription>
+                Manage cities, users, and system settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild>
+                <Link href={routes.admin.dashboard}>Open Admin Panel</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/components/auth/auth-provider/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { routes } from "@/lib/routes";
 
 export function PublicRoute({ children }: { children: React.ReactNode }) {
