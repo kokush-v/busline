@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Text } from "@/components/ui/text";
 import { Pagination } from "@/components/ui/pagination";
@@ -31,16 +30,12 @@ export function OrderList({
       }),
   });
 
-  const orders = useMemo(() => {
-    if (!data?.items) return [];
-
-    return data.items.map((order) => ({
-      id: order.id,
-      date: order.created_at,
-      status: order.status,
-      total: `₴${order.total_price || 0}`,
-    }));
-  }, [data?.items]);
+  const orders = (data.items ?? []).map((order) => ({
+    id: order.id,
+    date: order.created_at,
+    status: order.status,
+    total: `₴${order.total_price || 0}`,
+  }));
 
   return (
     <div className="space-y-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AsyncBoundary } from "@/components/ui/error-boundary";
 import { OrderList } from "./order-list";
 import { OrderListSkeleton } from "./order-list-skeleton";
 import { ProfileOrderFilterEnum } from "@/generated/api/model";
@@ -19,11 +20,8 @@ export function UserOrderHistory() {
     ProfileOrderFilterEnum.ALL,
   );
   const [offset, setOffset] = useState(0);
+  const [retryKey, setRetryKey] = useState(0);
   const limit = 10;
-
-  useEffect(() => {
-    setOffset(0);
-  }, [activeStatus]);
 
   return (
     <Card>
@@ -35,9 +33,10 @@ export function UserOrderHistory() {
           </div>
           <Tabs
             value={activeStatus}
-            onValueChange={(value) =>
-              setActiveStatus(value as ProfileOrderFilterEnum)
-            }
+            onValueChange={(value) => {
+              setActiveStatus(value as ProfileOrderFilterEnum);
+              setOffset(0);
+            }}
           >
             <TabsList>
               {Object.values(ProfileOrderFilterEnum).map((tab) => (
@@ -51,8 +50,10 @@ export function UserOrderHistory() {
       </CardHeader>
       <CardContent className="space-y-4">
         <Separator />
-        <Suspense
-          key={`${activeStatus}-${offset}`}
+        <AsyncBoundary
+          onReset={() => setRetryKey((value) => value + 1)}
+          fallbackMessage="Unable to load orders."
+          suspenseKey={`${activeStatus}-${offset}-${retryKey}`}
           fallback={<OrderListSkeleton />}
         >
           <OrderList
@@ -61,7 +62,7 @@ export function UserOrderHistory() {
             limit={limit}
             onOffsetChange={setOffset}
           />
-        </Suspense>
+        </AsyncBoundary>
       </CardContent>
     </Card>
   );
