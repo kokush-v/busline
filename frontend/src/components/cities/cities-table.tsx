@@ -4,6 +4,7 @@ import {
   ChevronDown,
   PencilIcon,
   TrashIcon,
+  RefreshCwIcon,
 } from "lucide-react";
 import type { CityRead } from "@/generated/api/model";
 import type { CitySortBy } from "@/generated/api/model/citySortBy";
@@ -24,6 +25,8 @@ import { cn } from "@/lib/utils";
 type CitiesTableProps = {
   cities: CityRead[];
   isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
   search: string;
   editingCityId?: string;
   onEdit: (city: CityRead) => void;
@@ -76,6 +79,8 @@ function SortableHead({
 export function CitiesTable({
   cities,
   isLoading,
+  isError,
+  onRetry,
   search,
   editingCityId,
   onEdit,
@@ -146,6 +151,20 @@ export function CitiesTable({
                   </TableCell>
                 </TableRow>
               ))
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="text-muted-foreground text-sm">
+                      Failed to load cities.
+                    </span>
+                    <Button variant="outline" size="sm" onClick={onRetry}>
+                      <RefreshCwIcon className="size-4" />
+                      Retry
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : cities.length === 0 ? (
               <TableRow>
                 <TableCell

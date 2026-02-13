@@ -1,5 +1,7 @@
+import { UserRead } from "@/generated/api/model";
+
 export type StoredAuth = {
-  user: import("@/generated/api/model").UserRead | null;
+  user: UserRead | null;
   accessToken: string;
   refreshToken: string | null;
   expiresAt?: number;

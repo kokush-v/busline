@@ -7,5 +7,6 @@ export const routes = {
   admin: {
     dashboard: "/admin/dashboard",
     cities: "/admin/cities",
+    buses: "/admin/buses",
   },
 } as const;
