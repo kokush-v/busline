@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { routes } from "@/lib/routes";
@@ -16,14 +17,18 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  if (!isAuthenticated) {
-    const next = `${pathname}${searchParams.toString() ? `?${searchParams}` : ""}`;
-    router.replace(`${routes.login}?next=${encodeURIComponent(next)}`);
-    return null;
-  }
+  const hasRequiredRole = !roles || (user?.role && roles.includes(user.role));
 
-  if (roles && (!user?.role || !roles.includes(user.role))) {
-    router.replace(routes.profile);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      const next = `${pathname}${searchParams.toString() ? `?${searchParams}` : ""}`;
+      router.replace(`${routes.login}?next=${encodeURIComponent(next)}`);
+    } else if (!hasRequiredRole) {
+      router.replace(routes.profile);
+    }
+  }, [isAuthenticated, hasRequiredRole, router, pathname, searchParams]);
+
+  if (!isAuthenticated || !hasRequiredRole) {
     return null;
   }
 
