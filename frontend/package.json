@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "generate-api-types": "bun --env-file=.env.local x orval",
-    "prepare": "husky && bun generate-api-types"
+    "prepare": "husky"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
