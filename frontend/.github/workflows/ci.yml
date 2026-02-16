@@ -9,8 +9,6 @@ on:
 jobs:
   quality-assurance:
     runs-on: ubuntu-latest
-    env:
-      ENV_FILE: ${{ secrets.ENV_FILE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,6 +25,8 @@ jobs:
         run: bunx prettier --check .
 
       - name: Write .env.local for Orval
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
           if [ -n "$ENV_FILE" ]; then
             umask 077
