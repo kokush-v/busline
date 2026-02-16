@@ -39,6 +39,8 @@ jobs:
       steps:
          - name: Deploy to EC2 via SSH
            uses: appleboy/ssh-action@v1.0.3
+           env:
+              ENV_FILE: ${{ secrets.ENV_FILE }}
            with:
               host: ${{ secrets.EC2_HOST }}
               username: ubuntu
@@ -54,7 +56,13 @@ jobs:
                  git fetch origin
                  git reset --hard origin/${{ github.ref_name }}
 
-                 cp .env.staging .env
+                 echo "🔐 Writing .env from ENV_FILE secret..."
+                 if [ -n "$ENV_FILE" ]; then
+                   umask 077
+                   printf "%s" "$ENV_FILE" > .env
+                 else
+                   echo "⚠️ ENV_FILE is empty. Skipping .env creation."
+                 fi
 
                  if [ ! -f /etc/docker/daemon.json ] || ! grep -q "8.8.8.8" /etc/docker/daemon.json; then
                    echo '{"dns": ["8.8.8.8", "1.1.1.1"]}' | sudo tee /etc/docker/daemon.json
