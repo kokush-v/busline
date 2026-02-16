@@ -9,6 +9,8 @@ on:
 jobs:
   quality-assurance:
     runs-on: ubuntu-latest
+    env:
+      ENV_FILE: ${{ secrets.ENV_FILE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,6 +25,18 @@ jobs:
 
       - name: Check Formatting
         run: bunx prettier --check .
+
+      - name: Write .env.local for Orval
+        run: |
+          if [ -n "$ENV_FILE" ]; then
+            umask 077
+            printf "%s" "$ENV_FILE" > .env.local
+          else
+            echo "⚠️ ENV_FILE is empty. Skipping .env.local creation."
+          fi
+
+      - name: Generate API Types
+        run: bun run generate-api-types
 
       - name: Type Check
         run: bun tsc --noEmit
