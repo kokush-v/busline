@@ -1,11 +1,4 @@
-import {
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
-  PencilIcon,
-  TrashIcon,
-  RefreshCwIcon,
-} from "lucide-react";
+import { PencilIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
 import type { StopRead } from "@/generated/api/model";
 import type { SortOrder } from "@/generated/api/model/sortOrder";
 import { Button } from "@/components/ui/button";
@@ -18,7 +11,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeletonRows } from "@/components/ui/table-skeleton-rows";
+import { SortableHead } from "@/components/ui/sortable-head";
 import { cn } from "@/lib/utils";
 
 type StopsTableProps = {
@@ -56,15 +50,6 @@ export function StopsTable({
   onOffsetChange,
   cityNameMap,
 }: StopsTableProps) {
-  const skeletonRows = Array.from({ length: limit }, (_, i) => i);
-
-  const SortIcon =
-    sortOrder === "asc"
-      ? ChevronUp
-      : sortOrder === "desc"
-        ? ChevronDown
-        : ArrowUpDown;
-
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border">
@@ -79,16 +64,13 @@ export function StopsTable({
           </colgroup>
           <TableHeader>
             <TableRow>
-              <TableHead>
-                <button
-                  type="button"
-                  className="hover:text-foreground flex items-center gap-1"
-                  onClick={onSortToggle}
-                >
-                  Name
-                  <SortIcon className="size-4" />
-                </button>
-              </TableHead>
+              <SortableHead
+                label="Name"
+                field="name"
+                activeSortBy="name"
+                activeSortOrder={sortOrder}
+                onSort={() => onSortToggle()}
+              />
               <TableHead>City</TableHead>
               <TableHead>Latitude</TableHead>
               <TableHead>Longitude</TableHead>
@@ -98,31 +80,16 @@ export function StopsTable({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              skeletonRows.map((i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Skeleton className="size-8 rounded-md" />
-                      <Skeleton className="size-8 rounded-md" />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              <TableSkeletonRows
+                count={limit}
+                columns={[
+                  { skeleton: "h-4 w-32" },
+                  { skeleton: "h-4 w-24" },
+                  { skeleton: "h-4 w-16" },
+                  { skeleton: "h-4 w-16" },
+                  { skeleton: "h-4 w-24" },
+                ]}
+              />
             ) : isError ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-48 text-center">

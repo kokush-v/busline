@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeletonRows } from "@/components/ui/table-skeleton-rows";
 import { SortableHead } from "@/components/ui/sortable-head";
 
 type TripsTableProps = {
@@ -55,7 +55,6 @@ export function TripsTable({
   total,
   onOffsetChange,
 }: TripsTableProps) {
-  const skeletonRows = Array.from({ length: limit }, (_, i) => i);
   const colCount = 6;
 
   return (
@@ -92,31 +91,16 @@ export function TripsTable({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              skeletonRows.map((i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-12" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-8" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-28" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Skeleton className="size-8 rounded-md" />
-                      <Skeleton className="size-8 rounded-md" />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              <TableSkeletonRows
+                count={limit}
+                columns={[
+                  { skeleton: "h-4 w-16" },
+                  { skeleton: "h-4 w-12" },
+                  { skeleton: "h-4 w-8" },
+                  { skeleton: "h-4 w-28" },
+                  { skeleton: "h-4 w-24" },
+                ]}
+              />
             ) : isError ? (
               <TableRow>
                 <TableCell colSpan={colCount} className="h-48 text-center">
