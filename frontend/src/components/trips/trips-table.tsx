@@ -1,11 +1,4 @@
-import {
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
-  PencilIcon,
-  TrashIcon,
-  RefreshCwIcon,
-} from "lucide-react";
+import { PencilIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
 import type { TripReadPublic } from "@/generated/api/model";
 import type { TripSortBy } from "@/generated/api/model/tripSortBy";
 import type { SortOrder } from "@/generated/api/model/sortOrder";
@@ -20,15 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
-
-type SortableHeadProps = {
-  label: string;
-  field: TripSortBy;
-  activeSortBy: TripSortBy;
-  activeSortOrder: SortOrder;
-  onSort: (field: TripSortBy) => void;
-  className?: string;
-};
+import { SortableHead } from "@/components/ui/sortable-head";
 
 type TripsTableProps = {
   trips: TripReadPublic[];
@@ -46,35 +31,6 @@ type TripsTableProps = {
   total: number;
   onOffsetChange: (offset: number) => void;
 };
-
-function SortableHead({
-  label,
-  field,
-  activeSortBy,
-  activeSortOrder,
-  onSort,
-  className,
-}: SortableHeadProps) {
-  const isActive = field === activeSortBy;
-  const Icon = isActive
-    ? activeSortOrder === "asc"
-      ? ChevronUp
-      : ChevronDown
-    : ArrowUpDown;
-
-  return (
-    <TableHead className={className}>
-      <button
-        type="button"
-        className="hover:text-foreground flex items-center gap-1"
-        onClick={() => onSort(field)}
-      >
-        {label}
-        <Icon className="size-4" />
-      </button>
-    </TableHead>
-  );
-}
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
