@@ -1,12 +1,4 @@
-import {
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
-  PencilIcon,
-  TrashIcon,
-  RefreshCwIcon,
-  ImageIcon,
-} from "lucide-react";
+import { PencilIcon, TrashIcon, RefreshCwIcon, ImageIcon } from "lucide-react";
 import type { BusRead } from "@/generated/api/model";
 import type { BusSortBy } from "@/generated/api/model/busSortBy";
 import type { SortOrder } from "@/generated/api/model/sortOrder";
@@ -23,6 +15,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { LoadingImage } from "@/components/ui/loading-image";
+import { SortableHead } from "@/components/ui/sortable-head";
 
 type BusesTableProps = {
   buses: BusRead[];
@@ -41,42 +34,6 @@ type BusesTableProps = {
   total: number;
   onOffsetChange: (offset: number) => void;
 };
-
-function SortableHead({
-  label,
-  field,
-  activeSortBy,
-  activeSortOrder,
-  onSort,
-  className,
-}: {
-  label: string;
-  field: BusSortBy;
-  activeSortBy: BusSortBy;
-  activeSortOrder: SortOrder;
-  onSort: (field: BusSortBy) => void;
-  className?: string;
-}) {
-  const isActive = field === activeSortBy;
-  const Icon = isActive
-    ? activeSortOrder === "asc"
-      ? ChevronUp
-      : ChevronDown
-    : ArrowUpDown;
-
-  return (
-    <TableHead className={className}>
-      <button
-        type="button"
-        className="hover:text-foreground flex items-center gap-1"
-        onClick={() => onSort(field)}
-      >
-        {label}
-        <Icon className="size-4" />
-      </button>
-    </TableHead>
-  );
-}
 
 export function BusesTable({
   buses,

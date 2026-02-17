@@ -1,11 +1,4 @@
-import {
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
-  PencilIcon,
-  TrashIcon,
-  RefreshCwIcon,
-} from "lucide-react";
+import { PencilIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
 import type { CityRead } from "@/generated/api/model";
 import type { CitySortBy } from "@/generated/api/model/citySortBy";
 import type { SortOrder } from "@/generated/api/model/sortOrder";
@@ -21,6 +14,7 @@ import {
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { SortableHead } from "@/components/ui/sortable-head";
 
 type CitiesTableProps = {
   cities: CityRead[];
@@ -39,42 +33,6 @@ type CitiesTableProps = {
   total: number;
   onOffsetChange: (offset: number) => void;
 };
-
-function SortableHead({
-  label,
-  field,
-  activeSortBy,
-  activeSortOrder,
-  onSort,
-  className,
-}: {
-  label: string;
-  field: CitySortBy;
-  activeSortBy: CitySortBy;
-  activeSortOrder: SortOrder;
-  onSort: (field: CitySortBy) => void;
-  className?: string;
-}) {
-  const isActive = field === activeSortBy;
-  const Icon = isActive
-    ? activeSortOrder === "asc"
-      ? ChevronUp
-      : ChevronDown
-    : ArrowUpDown;
-
-  return (
-    <TableHead className={className}>
-      <button
-        type="button"
-        className="hover:text-foreground flex items-center gap-1"
-        onClick={() => onSort(field)}
-      >
-        {label}
-        <Icon className="size-4" />
-      </button>
-    </TableHead>
-  );
-}
 
 export function CitiesTable({
   cities,
