@@ -37,3 +37,21 @@ class StopListResponse(PaginatedResponse[StopRead]):
     """Response model for paginated stops list."""
 
     pass
+
+
+class StopSearchParams(BaseModel):
+    search: str = ''
+    limit: int = Field(10, ge=1, le=100)
+    cursor: UUID | None = None
+
+
+class StopSearchItem(BaseModel):
+    id: UUID
+    name: str
+    city_name: str
+
+
+class StopSearchResponse(BaseModel):
+    items: list[StopSearchItem]
+    next_cursor: UUID | None = None
+    has_more: bool = False

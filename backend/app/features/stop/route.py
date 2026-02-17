@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 
 from app.core.aws.cognito import get_cognito_service
-from app.features.stop.schemas import StopCreate, StopListResponse, StopQueryParams, StopRead, StopUpdate
+from app.features.stop.schemas import StopCreate, StopListResponse, StopQueryParams, StopRead, StopSearchParams, StopSearchResponse, StopUpdate
 from app.features.stop.service import StopService
 from app.features.user.enums import UserRoleGroups
 
@@ -25,6 +25,15 @@ async def get_stops(
         limit=params.limit,
         offset=params.offset,
     )
+
+
+@router.get('/search', response_model=StopSearchResponse)
+async def search_stops(
+    params: StopSearchParams = Depends(),
+    service: StopService = Depends(),
+):
+    """Public endpoint for searching stops with lazy loading."""
+    return await service.search_stops(params)
 
 
 @router.get('/{stop_id}', response_model=StopRead)

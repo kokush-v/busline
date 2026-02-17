@@ -162,9 +162,7 @@ class BusService:
         await self._session.execute(stmt)
         await self._session.commit()
 
-    async def generate_presigned_upload_url(self, bus_id: UUID, request: PresignedUrlRequest) -> PresignedUrlResponse:
-        await self.get_bus(bus_id)
-
+    async def generate_presigned_upload_url(self, request: PresignedUrlRequest) -> PresignedUrlResponse:
         photo_key = str(uuid4())
 
         presigned_post = await self._s3_service.generate_presigned_upload_url(
