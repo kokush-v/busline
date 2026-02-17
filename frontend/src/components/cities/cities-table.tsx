@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeletonRows } from "@/components/ui/table-skeleton-rows";
 import { cn } from "@/lib/utils";
 import { SortableHead } from "@/components/ui/sortable-head";
 
@@ -51,8 +51,6 @@ export function CitiesTable({
   total,
   onOffsetChange,
 }: CitiesTableProps) {
-  const skeletonRows = Array.from({ length: limit }, (_, i) => i);
-
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border">
@@ -87,28 +85,15 @@ export function CitiesTable({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              skeletonRows.map((i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Skeleton className="size-8 rounded-md" />
-                      <Skeleton className="size-8 rounded-md" />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              <TableSkeletonRows
+                count={limit}
+                columns={[
+                  { skeleton: "h-4 w-32" },
+                  { skeleton: "h-4 w-16" },
+                  { skeleton: "h-4 w-16" },
+                  { skeleton: "h-4 w-24" },
+                ]}
+              />
             ) : isError ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-48 text-center">

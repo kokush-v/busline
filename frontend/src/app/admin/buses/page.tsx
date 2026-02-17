@@ -96,11 +96,7 @@ export default function BusesPage() {
     if (editingBus) {
       updateBus(editingBus.id, busPayload, async () => {
         if (photoKey) {
-          try {
-            await saveImage(editingBus.id, photoKey);
-          } catch {
-            // toast is handled inside saveImage
-          }
+          await saveImage(editingBus.id, photoKey);
         }
       });
     } else {
@@ -108,11 +104,7 @@ export default function BusesPage() {
         setIsCreating(false);
         setEditingBusId(bus.id);
         if (photoKey) {
-          try {
-            await saveImage(bus.id, photoKey);
-          } catch {
-            // toast is handled inside saveImage
-          }
+          await saveImage(bus.id, photoKey);
         }
       });
     }

@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeletonRows } from "@/components/ui/table-skeleton-rows";
 import { cn } from "@/lib/utils";
 import { LoadingImage } from "@/components/ui/loading-image";
 import { SortableHead } from "@/components/ui/sortable-head";
@@ -52,8 +52,6 @@ export function BusesTable({
   total,
   onOffsetChange,
 }: BusesTableProps) {
-  const skeletonRows = Array.from({ length: limit }, (_, i) => i);
-
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border">
@@ -102,31 +100,16 @@ export function BusesTable({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              skeletonRows.map((i) => (
-                <TableRow key={i}>
-                  <TableCell className="px-2">
-                    <Skeleton className="size-14 rounded" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-12" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Skeleton className="size-8 rounded-md" />
-                      <Skeleton className="size-8 rounded-md" />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              <TableSkeletonRows
+                count={limit}
+                columns={[
+                  { skeleton: "size-14 rounded", cell: "px-2" },
+                  { skeleton: "h-4 w-24" },
+                  { skeleton: "h-4 w-20" },
+                  { skeleton: "h-4 w-12" },
+                  { skeleton: "h-4 w-24" },
+                ]}
+              />
             ) : isError ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-48 text-center">
