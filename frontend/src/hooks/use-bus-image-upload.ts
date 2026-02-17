@@ -52,7 +52,7 @@ export function useBusImageUpload() {
 
   const saveImage = useCallback(
     (busId: string, photoKey: string): Promise<void> => {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         saveMutation.mutate(
           { busId, data: { photo_key: photoKey } },
           {
@@ -63,7 +63,7 @@ export function useBusImageUpload() {
             },
             onError: (error) => {
               toast.error(getErrorMessage(error));
-              reject(error);
+              resolve();
             },
           },
         );
@@ -74,7 +74,7 @@ export function useBusImageUpload() {
 
   const removeImage = useCallback(
     (busId: string): Promise<void> => {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         deleteMutation.mutate(
           { busId },
           {
@@ -85,7 +85,7 @@ export function useBusImageUpload() {
             },
             onError: (error) => {
               toast.error(getErrorMessage(error));
-              reject(error);
+              resolve();
             },
           },
         );
