@@ -8,7 +8,14 @@ from app.database.db import get_db_session
 from app.features.city.models import City
 from app.features.city.service import CityService
 from app.features.stop.models import Stop
-from app.features.stop.schemas import StopCreate, StopQueryParams, StopSearchItem, StopSearchParams, StopSearchResponse, StopUpdate
+from app.features.stop.schemas import (
+    StopCreate,
+    StopQueryParams,
+    StopSearchItem,
+    StopSearchParams,
+    StopSearchResponse,
+    StopUpdate,
+)
 from app.utils.decorators import transactional
 
 

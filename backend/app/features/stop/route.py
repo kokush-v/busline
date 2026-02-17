@@ -3,7 +3,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 
 from app.core.aws.cognito import get_cognito_service
-from app.features.stop.schemas import StopCreate, StopListResponse, StopQueryParams, StopRead, StopSearchParams, StopSearchResponse, StopUpdate
+from app.features.stop.schemas import (
+    StopCreate,
+    StopListResponse,
+    StopQueryParams,
+    StopRead,
+    StopSearchParams,
+    StopSearchResponse,
+    StopUpdate,
+)
 from app.features.stop.service import StopService
 from app.features.user.enums import UserRoleGroups
 
