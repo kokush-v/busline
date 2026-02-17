@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboardIcon, MapPinIcon, BusIcon } from "lucide-react";
+import {
+  LayoutDashboardIcon,
+  MapPinIcon,
+  BusIcon,
+  RouteIcon,
+  CircleDotIcon,
+} from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/ui/page-container";
@@ -25,6 +31,16 @@ const adminNavItems = [
     label: "Buses",
     href: routes.admin.buses,
     icon: BusIcon,
+  },
+  {
+    label: "Trips",
+    href: routes.admin.trips,
+    icon: RouteIcon,
+  },
+  {
+    label: "Stops",
+    href: routes.admin.stops,
+    icon: CircleDotIcon,
   },
 ];
 

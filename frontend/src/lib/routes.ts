@@ -8,5 +8,9 @@ export const routes = {
     dashboard: "/admin/dashboard",
     cities: "/admin/cities",
     buses: "/admin/buses",
+    trips: "/admin/trips",
+    stops: "/admin/stops",
+    tripNew: "/admin/trips/new",
+    tripEdit: (id: string) => `/admin/trips/${id}/edit` as const,
   },
 } as const;
