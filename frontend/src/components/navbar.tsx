@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/components/auth/auth-provider/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { routes } from "@/lib/routes";
 
 export function Navbar() {

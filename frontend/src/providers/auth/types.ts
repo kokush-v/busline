@@ -12,6 +12,7 @@ export type AuthContextValue = {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  authError: Error | null;
   login: (
     payload: LoginRequest & { rememberMe?: boolean },
   ) => Promise<TokenResponse>;

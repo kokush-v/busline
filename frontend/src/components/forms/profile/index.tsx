@@ -1,7 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/components/auth/auth-provider/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 
 type ProfileFormValues = {
   name: string;

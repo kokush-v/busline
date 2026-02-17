@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AuthProvider } from "@/components/auth/auth-provider";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/query-client-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/providers/auth";
 
 export const metadata: Metadata = {
   title: "BusLine",
