@@ -8,6 +8,7 @@ import {
   BusIcon,
   RouteIcon,
   CircleDotIcon,
+  UsersIcon,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,11 @@ const adminNavItems = [
     label: "Stops",
     href: routes.admin.stops,
     icon: CircleDotIcon,
+  },
+  {
+    label: "Users",
+    href: routes.admin.users,
+    icon: UsersIcon,
   },
 ];
 
