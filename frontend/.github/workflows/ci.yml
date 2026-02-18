@@ -37,7 +37,7 @@ jobs:
           fi
 
       - name: Generate API Types
-        run: bun
+        run: bun --env-file=.env x orval
 
       - name: Type Check
         run: bun tsc --noEmit
