@@ -98,7 +98,7 @@ jobs:
             rm -f bun.lock
 
             npm install
-            npm --env-file=.env.production x orval
+            npm orval
             npm run build
 
             echo "🚀 Managing PM2 process..."
