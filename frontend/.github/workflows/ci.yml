@@ -25,19 +25,19 @@ jobs:
       - name: Check Formatting
         run: bunx prettier --check .
 
-      - name: Write .env.local for Orval
+      - name: Write .env for Orval
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
           if [ -n "$ENV_FILE" ]; then
             umask 077
-            printf "%s" "$ENV_FILE" > .env.local
+            printf "%s" "$ENV_FILE" > .env
           else
-            echo "⚠️ ENV_FILE is empty. Skipping .env.local creation."
+            echo "⚠️ ENV_FILE is empty. Skipping .env creation."
           fi
 
       - name: Generate API Types
-        run: bun run generate-api-types
+        run: bun --env-file=.env x orval
 
       - name: Type Check
         run: bun tsc --noEmit
