@@ -5,6 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 import structlog
 
 from app.core.exeptions import setup_exceptions_handler
+from app.features.analytics.route import router as analytics_router
 from app.features.auth.route import router as auth_router
 from app.features.bus.route import router as bus_router
 from app.features.city.route import router as city_router
@@ -43,6 +44,7 @@ def get_application(include_middlewares: bool = True) -> FastAPI:
     if include_middlewares:
         application.add_middleware(LoggingMiddleware)
 
+    application.include_router(analytics_router)
     application.include_router(auth_router)
     application.include_router(bus_router)
     application.include_router(city_router)
