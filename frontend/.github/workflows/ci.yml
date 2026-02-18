@@ -37,7 +37,7 @@ jobs:
           fi
 
       - name: Generate API Types
-        run: bun --env-file=.env x orval
+        run: bun
 
       - name: Type Check
         run: bun tsc --noEmit
@@ -81,12 +81,12 @@ jobs:
 
             cd "$HOME/busline-frontend"
 
-            echo "🔐 Writing .env.production from ENV_FILE secret..."
+            echo "🔐 Writing .env from ENV_FILE secret..."
             if [ -n "$ENV_FILE" ]; then
               umask 077
-              printf "%s" "$ENV_FILE" > .env.production
+              printf "%s" "$ENV_FILE" > .env
             else
-              echo "⚠️ ENV_FILE is empty. Skipping .env.production creation."
+              echo "⚠️ ENV_FILE is empty. Skipping .env creation."
             fi
 
             echo "git fetch and reset..."
