@@ -3,8 +3,10 @@ export const routes = {
   register: "/register",
   verify: "/verify",
   profile: "/profile",
+  orderDetails: (id: string) => `/profile/orders/${id}` as const,
   trips: "/trips",
   tripDetails: (id: string) => `/trips/${id}` as const,
+  tripBook: (id: string) => `/trips/${id}/book` as const,
   admin: {
     dashboard: "/admin/dashboard",
     cities: "/admin/cities",

@@ -74,8 +74,8 @@ export function TripDetails({ tripId }: TripDetailsProps) {
                   {trip.seats_left} seats left
                 </span>
               </div>
-              <Button disabled className="w-full">
-                Book Now — Coming Soon
+              <Button asChild className="w-full">
+                <Link href={routes.tripBook(tripId)}>Book Now</Link>
               </Button>
             </CardContent>
           </Card>

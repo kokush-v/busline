@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageContainer } from "@/components/ui/page-container";
 import { AsyncBoundary } from "@/components/ui/error-boundary";
@@ -25,6 +25,40 @@ export default function TripsPage() {
   const [retryKey, setRetryKey] = useState(0);
 
   const resetOffset = () => setOffset(0);
+
+  const handleFromStopChange = useCallback((v: string) => {
+    setFromStopId(v);
+    resetOffset();
+  }, []);
+
+  const handleToStopChange = useCallback((v: string) => {
+    setToStopId(v);
+    resetOffset();
+  }, []);
+
+  const handleDepartureDateFromChange = useCallback((v: string) => {
+    setDepartureDateFrom(v);
+    resetOffset();
+  }, []);
+
+  const handleDepartureDateToChange = useCallback((v: string) => {
+    setDepartureDateTo(v);
+    resetOffset();
+  }, []);
+
+  const handleSortChange = useCallback(
+    (newSortBy: TripSortBy, newSortOrder: SortOrder) => {
+      setSortBy(newSortBy);
+      setSortOrder(newSortOrder);
+      resetOffset();
+    },
+    [],
+  );
+
+  const handleReset = useCallback(() => {
+    queryClient.removeQueries({ queryKey: ["/trips/list"] });
+    setRetryKey((k) => k + 1);
+  }, [queryClient]);
 
   const params = {
     limit: PAGE_SIZE,
@@ -53,34 +87,15 @@ export default function TripsPage() {
           departureDateTo={departureDateTo}
           sortBy={sortBy}
           sortOrder={sortOrder}
-          onFromStopChange={(v) => {
-            setFromStopId(v);
-            resetOffset();
-          }}
-          onToStopChange={(v) => {
-            setToStopId(v);
-            resetOffset();
-          }}
-          onDepartureDateFromChange={(v) => {
-            setDepartureDateFrom(v);
-            resetOffset();
-          }}
-          onDepartureDateToChange={(v) => {
-            setDepartureDateTo(v);
-            resetOffset();
-          }}
-          onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy);
-            setSortOrder(newSortOrder);
-            resetOffset();
-          }}
+          onFromStopChange={handleFromStopChange}
+          onToStopChange={handleToStopChange}
+          onDepartureDateFromChange={handleDepartureDateFromChange}
+          onDepartureDateToChange={handleDepartureDateToChange}
+          onSortChange={handleSortChange}
         />
 
         <AsyncBoundary
-          onReset={() => {
-            queryClient.removeQueries({ queryKey: ["/trips/list"] });
-            setRetryKey((k) => k + 1);
-          }}
+          onReset={handleReset}
           fallbackMessage="Unable to load trips."
           suspenseKey={suspenseKey}
           fallback={<TripCardListSkeleton />}

@@ -5,7 +5,10 @@ import { Text } from "@/components/ui/text";
 import { Pagination } from "@/components/ui/pagination";
 import { getUserOrders } from "@/generated/api/endpoints/orders/orders";
 import { OrderItem } from "./order-item";
-import { ProfileOrderFilterEnum } from "@/generated/api/model";
+import type {
+  ProfileOrderFilterEnum,
+  OrderStatus,
+} from "@/generated/api/model";
 
 type OrderListProps = {
   status: ProfileOrderFilterEnum | undefined;
@@ -28,12 +31,13 @@ export function OrderList({
         offset,
         filter: status,
       }),
+    refetchInterval: 5000,
   });
 
   const orders = (data.items ?? []).map((order) => ({
     id: order.id,
     date: order.created_at,
-    status: order.status,
+    status: order.status as OrderStatus,
     total: `₴${order.total_price || 0}`,
   }));
 
