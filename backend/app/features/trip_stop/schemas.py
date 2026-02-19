@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.common.schemas import EntityModel
 
@@ -64,3 +64,28 @@ class TripStopRead(EntityModel):
     position_index: int
     arrival_time: datetime
     departure_time: datetime
+
+
+class CityBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+
+
+class StopBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    latitude: float
+    longitude: float
+    city: CityBrief
+
+
+class TripStopReadPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    position_index: int
+    arrival_time: datetime
+    departure_time: datetime
+    stop: StopBrief
