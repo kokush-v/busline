@@ -24,7 +24,7 @@ router = APIRouter(prefix='/trips', tags=['Trips'])
 # ---- Public ----
 
 
-@router.get('/list', response_model=TripListResponse)
+@router.get('', response_model=TripListResponse)
 async def get_trips_public(
     params: TripQueryParams = Depends(),
     service: TripService = Depends(),
@@ -40,7 +40,7 @@ async def get_trips_public(
     )
 
 
-@router.get('/details/{trip_id}', response_model=TripReadPublic)
+@router.get('/{trip_id}', response_model=TripReadPublic)
 async def get_trip_public(trip_id: UUID, service: TripService = Depends()):
     return await service.get_trip(trip_id)
 
@@ -54,7 +54,7 @@ async def get_trip_seats(trip_id: UUID, service: TripService = Depends()):
 # ---- Admin ----
 
 
-@router.get('', response_model=TripAdminListResponse)
+@router.get('/admin', response_model=TripAdminListResponse)
 async def get_trips(
     params: TripAdminQueryParams = Depends(),
     service: TripService = Depends(),
@@ -71,7 +71,7 @@ async def get_trips(
     )
 
 
-@router.get('/{trip_id}', response_model=TripRead)
+@router.get('/admin/{trip_id}', response_model=TripRead)
 async def get_trip(
     trip_id: UUID,
     service: TripService = Depends(),

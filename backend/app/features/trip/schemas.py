@@ -106,6 +106,7 @@ class TripReadPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    bus_id: UUID
     price_per_seat: float
     seats_left: int
     bus: BusBrief
