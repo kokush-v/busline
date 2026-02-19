@@ -1,10 +1,4 @@
-import {
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
-  PencilIcon,
-  TrashIcon,
-} from "lucide-react";
+import { PencilIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
 import type { CityRead } from "@/generated/api/model";
 import type { CitySortBy } from "@/generated/api/model/citySortBy";
 import type { SortOrder } from "@/generated/api/model/sortOrder";
@@ -18,12 +12,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeletonRows } from "@/components/ui/table-skeleton-rows";
 import { cn } from "@/lib/utils";
+import { SortableHead } from "@/components/ui/sortable-head";
 
 type CitiesTableProps = {
   cities: CityRead[];
   isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
   search: string;
   editingCityId?: string;
   onEdit: (city: CityRead) => void;
@@ -37,45 +34,11 @@ type CitiesTableProps = {
   onOffsetChange: (offset: number) => void;
 };
 
-function SortableHead({
-  label,
-  field,
-  activeSortBy,
-  activeSortOrder,
-  onSort,
-  className,
-}: {
-  label: string;
-  field: CitySortBy;
-  activeSortBy: CitySortBy;
-  activeSortOrder: SortOrder;
-  onSort: (field: CitySortBy) => void;
-  className?: string;
-}) {
-  const isActive = field === activeSortBy;
-  const Icon = isActive
-    ? activeSortOrder === "asc"
-      ? ChevronUp
-      : ChevronDown
-    : ArrowUpDown;
-
-  return (
-    <TableHead className={className}>
-      <button
-        type="button"
-        className="hover:text-foreground flex items-center gap-1"
-        onClick={() => onSort(field)}
-      >
-        {label}
-        <Icon className="size-4" />
-      </button>
-    </TableHead>
-  );
-}
-
 export function CitiesTable({
   cities,
   isLoading,
+  isError,
+  onRetry,
   search,
   editingCityId,
   onEdit,
@@ -88,8 +51,6 @@ export function CitiesTable({
   total,
   onOffsetChange,
 }: CitiesTableProps) {
-  const skeletonRows = Array.from({ length: limit }, (_, i) => i);
-
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border">
@@ -124,28 +85,29 @@ export function CitiesTable({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              skeletonRows.map((i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Skeleton className="size-8 rounded-md" />
-                      <Skeleton className="size-8 rounded-md" />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              <TableSkeletonRows
+                count={limit}
+                columns={[
+                  { skeleton: "h-4 w-32" },
+                  { skeleton: "h-4 w-16" },
+                  { skeleton: "h-4 w-16" },
+                  { skeleton: "h-4 w-24" },
+                ]}
+              />
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="text-muted-foreground text-sm">
+                      Failed to load cities.
+                    </span>
+                    <Button variant="outline" size="sm" onClick={onRetry}>
+                      <RefreshCwIcon className="size-4" />
+                      Retry
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : cities.length === 0 ? (
               <TableRow>
                 <TableCell

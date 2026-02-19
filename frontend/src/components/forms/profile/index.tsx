@@ -2,12 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
-
-type ProfileFormValues = {
-  name: string;
-  email: string;
-  phone: string;
-};
+import { ProfileFormValues } from "./types";
 
 export function ProfileForm() {
   const { user } = useAuth();

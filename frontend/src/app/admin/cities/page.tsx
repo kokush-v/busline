@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { toast } from "sonner";
 import { useGetCities } from "@/generated/api/endpoints/cities/cities";
 import type { CityRead } from "@/generated/api/model";
 import { CitySortBy } from "@/generated/api/model/citySortBy";
@@ -14,6 +13,7 @@ import {
   CityFormPanel,
   DeleteCityDialog,
 } from "@/components/cities";
+import { AdminPageLayout } from "@/components/admin/admin-page-layout";
 
 const PAGE_SIZE = 20;
 
@@ -33,7 +33,7 @@ export default function CitiesPage() {
 
   const panelOpen = isCreating || !!editingCityId;
 
-  const { data, isLoading } = useGetCities({
+  const { data, isLoading, isError, refetch } = useGetCities({
     search: search || undefined,
     limit: PAGE_SIZE,
     offset,
@@ -87,11 +87,6 @@ export default function CitiesPage() {
     longitude: number;
     latitude: number;
   }) => {
-    if (!payload.name) {
-      toast.error("City name is required.");
-      return;
-    }
-
     if (editingCity) {
       updateCity(editingCity.id, payload);
     } else {
@@ -108,36 +103,38 @@ export default function CitiesPage() {
   };
 
   return (
-    <div className="flex flex-1 gap-6">
-      <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <CitiesHeader onAddCity={openCreatePanel} />
-        <CitySearchInput value={search} onChange={handleSearchChange} />
-        <CitiesTable
-          cities={cities}
-          isLoading={isLoading}
-          search={search}
-          editingCityId={editingCityId ?? undefined}
-          onEdit={openEditPanel}
-          onDelete={setDeleteTarget}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onSortChange={handleSortChange}
-          offset={offset}
-          limit={PAGE_SIZE}
-          total={total}
-          onOffsetChange={handleOffsetChange}
-        />
-      </div>
-
-      {panelOpen && (
-        <CityFormPanel
-          key={editingCityId ?? "new"}
-          editingCity={editingCity}
-          onClose={closePanel}
-          onSubmit={handleFormSubmit}
-          isMutating={isMutating}
-        />
-      )}
+    <AdminPageLayout
+      panel={
+        panelOpen && (
+          <CityFormPanel
+            key={editingCityId ?? "new"}
+            editingCity={editingCity}
+            onClose={closePanel}
+            onSubmit={handleFormSubmit}
+            isMutating={isMutating}
+          />
+        )
+      }
+    >
+      <CitiesHeader onAddCity={openCreatePanel} />
+      <CitySearchInput value={search} onChange={handleSearchChange} />
+      <CitiesTable
+        cities={cities}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
+        search={search}
+        editingCityId={editingCityId ?? undefined}
+        onEdit={openEditPanel}
+        onDelete={setDeleteTarget}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        offset={offset}
+        limit={PAGE_SIZE}
+        total={total}
+        onOffsetChange={handleOffsetChange}
+      />
 
       <DeleteCityDialog
         city={deleteTarget}
@@ -145,6 +142,6 @@ export default function CitiesPage() {
         onCancel={() => setDeleteTarget(null)}
         disabled={isMutating}
       />
-    </div>
+    </AdminPageLayout>
   );
 }
