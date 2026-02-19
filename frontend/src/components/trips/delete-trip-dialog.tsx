@@ -8,10 +8,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { TripReadPublic } from "@/generated/api/model";
+import type { TripReadAdmin } from "@/generated/api/model";
 
 type DeleteTripDialogProps = {
-  trip: TripReadPublic | null;
+  trip: TripReadAdmin | null;
   onConfirm: () => void;
   onCancel: () => void;
   disabled: boolean;

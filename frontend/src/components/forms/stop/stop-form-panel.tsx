@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { XIcon, Loader2Icon, SearchIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
@@ -37,7 +37,7 @@ export function StopFormPanel({
     control,
     formState: { errors },
   } = useForm<StopFormValues>({
-    resolver: zodResolver(stopFormSchema),
+    resolver: standardSchemaResolver(stopFormSchema),
     defaultValues: editingStop
       ? {
           city_id: editingStop.city_id,

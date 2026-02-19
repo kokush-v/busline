@@ -85,7 +85,7 @@ export function Combobox({
                   key={option.value}
                   type="button"
                   className={cn(
-                    "hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-pointer items-center rounded-sm py-1.5 pr-2 pl-8 text-sm outline-none select-none",
+                    "hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-pointer items-center rounded-sm px-3 py-1.5 text-sm outline-none select-none",
                     value === option.value && "bg-accent",
                   )}
                   onClick={() => {
@@ -95,9 +95,9 @@ export function Combobox({
                   }}
                 >
                   {value === option.value && (
-                    <CheckIcon className="absolute left-2 size-4" />
+                    <CheckIcon className="mr-2 size-4 shrink-0" />
                   )}
-                  {option.label}
+                  <span className="truncate">{option.label}</span>
                 </button>
               ))
             )}

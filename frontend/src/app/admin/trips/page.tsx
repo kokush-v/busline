@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useGetTrips } from "@/generated/api/endpoints/trips/trips";
-import type { TripReadPublic } from "@/generated/api/model";
+import type { TripReadAdmin } from "@/generated/api/model";
 import { TripSortBy } from "@/generated/api/model/tripSortBy";
 import { SortOrder } from "@/generated/api/model/sortOrder";
 import { useTripsApi } from "@/hooks/use-trips-api";
@@ -13,6 +13,7 @@ import {
   TripsTable,
   DeleteTripDialog,
 } from "@/components/trips";
+import { TripDateFilter } from "@/components/trips/trip-date-filter";
 import { AdminPageLayout } from "@/components/admin/admin-page-layout";
 import { routes } from "@/lib/routes";
 
@@ -24,7 +25,9 @@ export default function TripsPage() {
   const [offset, setOffset] = useState(0);
   const [sortBy, setSortBy] = useState<TripSortBy>(TripSortBy.created_at);
   const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.desc);
-  const [deleteTarget, setDeleteTarget] = useState<TripReadPublic | null>(null);
+  const [departureDateFrom, setDepartureDateFrom] = useState("");
+  const [departureDateTo, setDepartureDateTo] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<TripReadAdmin | null>(null);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -37,6 +40,8 @@ export default function TripsPage() {
     offset,
     sort_by: sortBy,
     sort_order: sortOrder,
+    departure_date_from: departureDateFrom || undefined,
+    departure_date_to: departureDateTo || undefined,
   });
 
   const { deleteTrip, isMutating } = useTripsApi();
@@ -60,7 +65,7 @@ export default function TripsPage() {
     setOffset(newOffset);
   };
 
-  const handleEdit = (trip: TripReadPublic) => {
+  const handleEdit = (trip: TripReadAdmin) => {
     router.push(routes.admin.tripEdit(trip.id));
   };
 
@@ -74,7 +79,21 @@ export default function TripsPage() {
   return (
     <AdminPageLayout>
       <TripsHeader onAddTrip={() => router.push(routes.admin.tripNew)} />
-      <TripSearchInput value={search} onChange={handleSearchChange} />
+      <div className="flex flex-wrap items-end gap-4">
+        <TripSearchInput value={search} onChange={handleSearchChange} />
+        <TripDateFilter
+          departureDateFrom={departureDateFrom}
+          departureDateTo={departureDateTo}
+          onDepartureDateFromChange={(v) => {
+            setDepartureDateFrom(v);
+            setOffset(0);
+          }}
+          onDepartureDateToChange={(v) => {
+            setDepartureDateTo(v);
+            setOffset(0);
+          }}
+        />
+      </div>
       <TripsTable
         trips={trips}
         isLoading={isLoading}

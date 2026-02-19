@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { routes } from "@/lib/routes";
 import type { TripFormValues } from "@/components/forms/trip/schema";
 import type { SelectedStopInfo } from "@/components/forms/trip/types";
-import type { TripReadPublic, StopRead } from "@/generated/api/model";
+import type { TripRead, StopRead } from "@/generated/api/model";
 
 const TripRouteMap = dynamic(
   () => import("@/components/trips/trip-route-map"),
@@ -26,7 +26,7 @@ export function TripEditForm({
   trip,
 }: {
   tripId: string;
-  trip: TripReadPublic;
+  trip: TripRead;
 }) {
   const router = useRouter();
   const { data: stopsData, isLoading: stopsLoading } = useGetStops({

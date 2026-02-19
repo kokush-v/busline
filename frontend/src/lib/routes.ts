@@ -1,9 +1,10 @@
 export const routes = {
-  home: "/",
   login: "/login",
   register: "/register",
   verify: "/verify",
   profile: "/profile",
+  trips: "/trips",
+  tripDetails: (id: string) => `/trips/${id}` as const,
   admin: {
     dashboard: "/admin/dashboard",
     cities: "/admin/cities",

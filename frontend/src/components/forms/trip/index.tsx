@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   DndContext,
   closestCenter,
@@ -49,7 +49,7 @@ export function TripForm({
     control,
     formState: { errors },
   } = useForm<TripFormValues>({
-    resolver: zodResolver(tripFormSchema),
+    resolver: standardSchemaResolver(tripFormSchema),
     defaultValues: defaultValues ?? {
       bus_id: "",
       price_per_seat: 0,
@@ -75,16 +75,17 @@ export function TripForm({
 
   // Sync selectedStops with form fields
   const selectedStopIds = selectedStops.map((s) => s.id);
+  const watchedStops = watch("stops");
 
   useEffect(() => {
-    const currentStops = fields.map((f) => f.stop_id);
+    const currentStops = watchedStops.map((f) => f.stop_id);
     const isSame =
       currentStops.length === selectedStopIds.length &&
       currentStops.every((id, i) => id === selectedStopIds[i]);
 
     if (!isSame) {
       const newStops = selectedStopIds.map((stopId) => {
-        const existing = fields.find((f) => f.stop_id === stopId);
+        const existing = watchedStops.find((f) => f.stop_id === stopId);
         return {
           stop_id: stopId,
           arrival_time: existing?.arrival_time ?? "",

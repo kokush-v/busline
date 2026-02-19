@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { XIcon } from "lucide-react";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ function CreateUserForm({
     handleSubmit,
     formState: { errors },
   } = useForm<UserCreateFormValues>({
-    resolver: zodResolver(userCreateSchema),
+    resolver: standardSchemaResolver(userCreateSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -147,7 +147,7 @@ function EditUserForm({
     watch,
     formState: { errors },
   } = useForm<UserUpdateFormValues>({
-    resolver: zodResolver(userUpdateSchema),
+    resolver: standardSchemaResolver(userUpdateSchema),
     defaultValues: {
       name: editingUser.name ?? "",
       phone_number: editingUser.phone_number ?? "",

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
@@ -61,7 +61,7 @@ export function CreateStopDialog({
     reset,
     formState: { errors },
   } = useForm<StopFormValues>({
-    resolver: zodResolver(stopFormSchema),
+    resolver: standardSchemaResolver(stopFormSchema),
     defaultValues: {
       city_id: "",
       name: "",

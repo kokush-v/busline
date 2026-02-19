@@ -1,5 +1,5 @@
 import { PencilIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
-import type { TripReadPublic } from "@/generated/api/model";
+import type { TripReadAdmin } from "@/generated/api/model";
 import type { TripSortBy } from "@/generated/api/model/tripSortBy";
 import type { SortOrder } from "@/generated/api/model/sortOrder";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,13 @@ import { TableSkeletonRows } from "@/components/ui/table-skeleton-rows";
 import { SortableHead } from "@/components/ui/sortable-head";
 
 type TripsTableProps = {
-  trips: TripReadPublic[];
+  trips: TripReadAdmin[];
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
   search: string;
-  onEdit: (trip: TripReadPublic) => void;
-  onDelete: (trip: TripReadPublic) => void;
+  onEdit: (trip: TripReadAdmin) => void;
+  onDelete: (trip: TripReadAdmin) => void;
   sortBy: TripSortBy;
   sortOrder: SortOrder;
   onSortChange: (field: TripSortBy) => void;
@@ -78,7 +78,13 @@ export function TripsTable({
                 onSort={onSortChange}
               />
               <TableHead>Stops</TableHead>
-              <TableHead>First departure</TableHead>
+              <SortableHead
+                label="First departure"
+                field={"departure_time" as TripSortBy}
+                activeSortBy={sortBy}
+                activeSortOrder={sortOrder}
+                onSort={onSortChange}
+              />
               <SortableHead
                 label="Created at"
                 field={"created_at" as TripSortBy}
@@ -99,6 +105,7 @@ export function TripsTable({
                   { skeleton: "h-4 w-8" },
                   { skeleton: "h-4 w-28" },
                   { skeleton: "h-4 w-24" },
+                  { skeleton: "h-4 w-16" },
                 ]}
               />
             ) : isError ? (
