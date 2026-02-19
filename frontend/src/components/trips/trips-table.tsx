@@ -1,6 +1,6 @@
 import { PencilIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
 import type { TripReadAdmin } from "@/generated/api/model";
-import type { TripSortBy } from "@/generated/api/model/tripSortBy";
+import type { TripAdminSortBy } from "@/generated/api/model/tripAdminSortBy";
 import type { SortOrder } from "@/generated/api/model/sortOrder";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,9 +23,9 @@ type TripsTableProps = {
   search: string;
   onEdit: (trip: TripReadAdmin) => void;
   onDelete: (trip: TripReadAdmin) => void;
-  sortBy: TripSortBy;
+  sortBy: TripAdminSortBy;
   sortOrder: SortOrder;
-  onSortChange: (field: TripSortBy) => void;
+  onSortChange: (field: TripAdminSortBy) => void;
   offset: number;
   limit: number;
   total: number;
@@ -65,29 +65,23 @@ export function TripsTable({
             <TableRow>
               <SortableHead
                 label="Price / seat"
-                field={"price" as TripSortBy}
+                field={"price" as TripAdminSortBy}
                 activeSortBy={sortBy}
                 activeSortOrder={sortOrder}
                 onSort={onSortChange}
               />
               <SortableHead
                 label="Seats left"
-                field={"seats_left" as TripSortBy}
+                field={"seats_left" as TripAdminSortBy}
                 activeSortBy={sortBy}
                 activeSortOrder={sortOrder}
                 onSort={onSortChange}
               />
               <TableHead>Stops</TableHead>
-              <SortableHead
-                label="First departure"
-                field={"departure_time" as TripSortBy}
-                activeSortBy={sortBy}
-                activeSortOrder={sortOrder}
-                onSort={onSortChange}
-              />
+              <TableHead>First departure</TableHead>
               <SortableHead
                 label="Created at"
-                field={"created_at" as TripSortBy}
+                field={"created_at" as TripAdminSortBy}
                 activeSortBy={sortBy}
                 activeSortOrder={sortOrder}
                 onSort={onSortChange}

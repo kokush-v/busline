@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useGetTrips } from "@/generated/api/endpoints/trips/trips";
 import type { TripReadAdmin } from "@/generated/api/model";
-import { TripSortBy } from "@/generated/api/model/tripSortBy";
+import { TripAdminSortBy } from "@/generated/api/model/tripAdminSortBy";
 import { SortOrder } from "@/generated/api/model/sortOrder";
 import { useTripsApi } from "@/hooks/use-trips-api";
 import {
@@ -23,7 +23,9 @@ export default function TripsPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
-  const [sortBy, setSortBy] = useState<TripSortBy>(TripSortBy.created_at);
+  const [sortBy, setSortBy] = useState<TripAdminSortBy>(
+    TripAdminSortBy.created_at,
+  );
   const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.desc);
   const [departureDateFrom, setDepartureDateFrom] = useState("");
   const [departureDateTo, setDepartureDateTo] = useState("");
@@ -49,7 +51,7 @@ export default function TripsPage() {
   const trips = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
 
-  const handleSortChange = (field: TripSortBy) => {
+  const handleSortChange = (field: TripAdminSortBy) => {
     if (field === sortBy) {
       setSortOrder((prev) =>
         prev === SortOrder.asc ? SortOrder.desc : SortOrder.asc,
