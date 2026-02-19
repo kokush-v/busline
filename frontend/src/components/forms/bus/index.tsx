@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { XIcon } from "lucide-react";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ export function BusFormPanel({
     control,
     formState: { errors },
   } = useForm<BusFormValues>({
-    resolver: zodResolver(busFormSchema),
+    resolver: standardSchemaResolver(busFormSchema),
     defaultValues: editingBus
       ? {
           number_plate: editingBus.number_plate,

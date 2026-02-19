@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { XIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Text } from "@/components/ui/text";
@@ -30,7 +30,7 @@ export function CityFormPanel({
     control,
     formState: { errors },
   } = useForm<CityFormValues>({
-    resolver: zodResolver(cityFormSchema),
+    resolver: standardSchemaResolver(cityFormSchema),
     defaultValues: editingCity
       ? {
           name: editingCity.name,

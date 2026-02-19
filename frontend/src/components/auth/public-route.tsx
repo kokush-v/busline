@@ -13,7 +13,7 @@ export function PublicRoute({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isAuthenticated) {
       const next = searchParams.get("next");
-      router.replace(next || routes.home);
+      router.replace(next || routes.trips);
     }
   }, [isAuthenticated, router, searchParams]);
 
