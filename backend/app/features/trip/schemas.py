@@ -4,8 +4,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.common.schemas import EntityModel, PaginatedResponse, QueryParams
-from app.features.trip.enums import TripSortBy
-from app.features.trip_stop.schemas import TripStopCreate, TripStopRead
+from app.features.trip.enums import TripAdminSortBy, TripSortBy
+from app.features.trip_stop.schemas import TripStopCreate, TripStopRead, TripStopReadPublic
 
 
 class TripBase(BaseModel):
@@ -81,8 +81,8 @@ class TripRead(EntityModel):
     trip_stops: list[TripStopRead]
 
 
-class TripReadPublic(BaseModel):
-    """Public view of trip with limited information."""
+class TripReadAdmin(BaseModel):
+    """Admin view of trip with basic data."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -92,6 +92,25 @@ class TripReadPublic(BaseModel):
     seats_left: int
     trip_stops: list[TripStopRead]
     created_at: datetime
+
+
+class BusBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    photo_url: str | None = None
+
+
+class TripReadPublic(BaseModel):
+    """Public view of trip with stop and city details."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    bus_id: UUID
+    price_per_seat: float
+    seats_left: int
+    bus: BusBrief
+    trip_stops: list[TripStopReadPublic]
 
 
 class TripQueryParams(QueryParams):
@@ -107,7 +126,21 @@ class TripQueryParams(QueryParams):
     available_seats_min: int | None = Field(None, ge=0, description='Filter by minimum available seats')
 
 
+class TripAdminQueryParams(QueryParams):
+    """Simplified query parameters for admin trip listing."""
+
+    sort_by: TripAdminSortBy = Field(TripAdminSortBy.CREATED_AT, description='Sort by field')
+    departure_date_from: datetime | None = Field(None, description='Filter by minimum departure date')
+    departure_date_to: datetime | None = Field(None, description='Filter by maximum departure date')
+
+
+class TripAdminListResponse(PaginatedResponse[TripReadAdmin]):
+    """Response model for admin paginated trips list."""
+
+    pass
+
+
 class TripListResponse(PaginatedResponse[TripReadPublic]):
-    """Response model for paginated trips list."""
+    """Response model for public paginated trips list."""
 
     pass

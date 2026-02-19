@@ -12,8 +12,9 @@ from app.features.bus.service import BusService
 from app.features.seat.models import Seat
 from app.features.seat.service import SeatService
 from app.features.stop.service import StopService
+from app.features.trip.enums import TripAdminSortBy
 from app.features.trip.models import Trip
-from app.features.trip.schemas import TripCreate, TripQueryParams, TripSortBy, TripUpdate
+from app.features.trip.schemas import TripAdminQueryParams, TripCreate, TripQueryParams, TripSortBy, TripUpdate
 from app.features.trip_stop.models import TripStop
 from app.utils.decorators import transactional
 
@@ -128,6 +129,37 @@ class TripService:
 
         query = self.__apply_sorting(query, params)
         query = self.__apply_pagination(query, params)
+
+        result = await self._session.execute(query)
+        trips = list(result.scalars().all())
+
+        return trips, total
+
+    async def get_trips_admin(self, params: TripAdminQueryParams) -> tuple[list[Trip], int]:
+        """Get trips for admin panel with simple pagination and sorting."""
+        query = select(Trip)
+
+        if params.departure_date_from or params.departure_date_to:
+            date_conditions = [TripStop.position_index == 1]
+            if params.departure_date_from:
+                date_conditions.append(TripStop.departure_time >= params.departure_date_from)
+            if params.departure_date_to:
+                date_conditions.append(TripStop.departure_time <= params.departure_date_to)
+            subq = select(TripStop.trip_id).where(and_(*date_conditions)).subquery()
+            query = query.where(Trip.id.in_(select(subq)))
+
+        total = await self.__get_total_count(query)
+
+        sort_column_map = {
+            TripAdminSortBy.CREATED_AT: Trip.created_at,
+            TripAdminSortBy.PRICE: Trip.price_per_seat,
+            TripAdminSortBy.SEATS_LEFT: Trip.seats_left,
+        }
+        sort_column = sort_column_map.get(params.sort_by, Trip.created_at)
+        order_func = desc if params.sort_order == SortOrder.DESC else asc
+        query = query.order_by(order_func(sort_column))
+
+        query = query.limit(params.limit).offset(params.offset)
 
         result = await self._session.execute(query)
         trips = list(result.scalars().all())

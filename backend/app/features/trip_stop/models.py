@@ -43,7 +43,7 @@ class TripStop(Base):
         ForeignKey('stops.id', ondelete='CASCADE'),
         nullable=False,
     )
-    stop: Mapped['Stop'] = relationship('Stop', back_populates='trip_stops')
+    stop: Mapped['Stop'] = relationship('Stop', back_populates='trip_stops', lazy='selectin')
 
     position_index: Mapped[int] = mapped_column(Integer, nullable=False)
     arrival_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

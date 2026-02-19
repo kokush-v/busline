@@ -6,3 +6,9 @@ class TripSortBy(StrEnum):
     PRICE = 'price'
     SEATS_LEFT = 'seats_left'
     CREATED_AT = 'created_at'
+
+
+class TripAdminSortBy(StrEnum):
+    CREATED_AT = 'created_at'
+    PRICE = 'price'
+    SEATS_LEFT = 'seats_left'

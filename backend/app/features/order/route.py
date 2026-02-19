@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 import httpx
 
 from app.core.aws.cognito import get_cognito_service
+from app.core.exeptions.server import ServerException
 from app.features.auth.schemas import CognitoUser
 from app.features.order.schemas import OrderListResponse, OrderPaymentResponse, OrderQueryParams, OrderRead
 from app.features.order.service import OrderService
@@ -45,16 +46,17 @@ async def pay_order(
                     'payment_method': 'mock',
                 },
             )
+    except Exception as err:
+        raise ServerException(
+            message='Failed to process payment',
+            status=502,
+            details={'error': str(err)},
+        ) from err
 
-        return OrderPaymentResponse(
-            order_id=order_id,
-            message=f'Payment request submitted. Status: {status_override or "PAID"}',
-        )
-    except Exception as e:
-        return OrderPaymentResponse(
-            order_id=order_id,
-            message=f'Payment request failed: {str(e)}',
-        )
+    return OrderPaymentResponse(
+        order_id=order_id,
+        message=f'Payment request submitted. Status: {status_override or "PAID"}',
+    )
 
 
 @router.delete('/{order_id}', status_code=status.HTTP_204_NO_CONTENT)

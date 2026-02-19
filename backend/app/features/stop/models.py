@@ -36,7 +36,7 @@ class Stop(Base):
         ForeignKey('cities.id', ondelete='CASCADE'),
         nullable=False,
     )
-    city: Mapped['City'] = relationship('City', back_populates='stops')
+    city: Mapped['City'] = relationship('City', back_populates='stops', lazy='selectin')
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
