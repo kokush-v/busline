@@ -46,17 +46,17 @@ async def pay_order(
                     'payment_method': 'mock',
                 },
             )
-
-        return OrderPaymentResponse(
-            order_id=order_id,
-            message=f'Payment request submitted. Status: {status_override or "PAID"}',
-        )
-    except Exception as e:
+    except Exception as err:
         raise ServerException(
             message='Failed to process payment',
             status=502,
-            details={'error': str(e)},
-        ) from e
+            details={'error': str(err)},
+        ) from err
+
+    return OrderPaymentResponse(
+        order_id=order_id,
+        message=f'Payment request submitted. Status: {status_override or "PAID"}',
+    )
 
 
 @router.delete('/{order_id}', status_code=status.HTTP_204_NO_CONTENT)

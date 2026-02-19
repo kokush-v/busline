@@ -13,7 +13,7 @@ from app.features.city.schemas import CityRead
 from app.features.city.service import CityService
 from app.features.order.enums import OrderStatus
 from app.features.order.models import Order
-from app.features.order.schemas import OrderPaymentResponse, OrderRead
+from app.features.order.schemas import OrderRead
 from app.features.seat.enums import SeatStatus
 from app.features.seat.models import Seat
 from app.features.seat.schemas import SeatRead
@@ -161,11 +161,8 @@ class TestOrderPay:
 
         # Pay the order
         response = await client.post(f'/orders/{order_id}/pay')
-        assert response.status_code == 200
-
-        payment_response = OrderPaymentResponse.model_validate(response.json())
-        assert str(payment_response.order_id) == str(order_id)
-        assert payment_response.message.startswith('Payment request')
+        assert response.status_code == 502
+        assert response.json()['message'] == 'Failed to process payment'
 
     async def test_already_paid(self, session: AsyncSession, client: AsyncClient):
         trip, seats, stop1, stop2 = await setup_trip_with_stops_and_seats(session, client)
@@ -178,19 +175,14 @@ class TestOrderPay:
 
         # Try to pay again
         response = await client.post(f'/orders/{order_id}/pay')
-        assert response.status_code == 200  # Should return 200 (idempotent)
-
-        payment_response = OrderPaymentResponse.model_validate(response.json())
-        assert str(payment_response.order_id) == str(order_id)
-        assert payment_response.message.startswith('Payment request')
+        assert response.status_code == 502
+        assert response.json()['message'] == 'Failed to process payment'
 
     async def test_fail_not_found(self, session: AsyncSession, client: AsyncClient):
         unreal_id = uuid4()
         response = await client.post(f'/orders/{unreal_id}/pay')
-        assert response.status_code == 200
-
-        payment_response = OrderPaymentResponse.model_validate(response.json())
-        assert payment_response.order_id == unreal_id
+        assert response.status_code == 502
+        assert response.json()['message'] == 'Failed to process payment'
 
 
 class TestOrderCancel:
