@@ -50,63 +50,49 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    environment: staging
     needs: quality-assurance
     if: github.ref == 'refs/heads/main'
-    env:
-      ENV_FILE: ${{ secrets.ENV_FILE }}
     steps:
-      - name: Deploy to EC2 via SSH
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install and Build (Prepare Artifact)
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          printf "%s" "$ENV_FILE" > .env.production
+          bun install --frozen-lockfile
+          bun run build
+          # Видаляємо devDependencies, щоб папка була легшою
+          rm -rf node_modules
+          bun install --production
+
+      - name: Copy files to EC2 via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: ".next,public,package.json,node_modules,.env.production,next.config.mjs"
+          target: "~/busline-frontend"
+
+      - name: Restart PM2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: ENV_FILE
           script: |
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            cd ~/busline-frontend
 
-            nvm install 22
-            nvm use 22
+            pm2 flush
+            sudo journalctl --vacuum-time=1d
+            npm cache clean --force
 
-            export NEXT_TELEMETRY_DISABLED=1
-            export NODE_OPTIONS="--max-old-space-size=1536"
-
-            if [ ! -d "$HOME/busline-frontend/.git" ]; then
-              echo "🧹 Cleaning up and cloning..."
-              rm -rf "$HOME/busline-frontend"
-              git clone git@github.com:${{ github.repository }}.git "$HOME/busline-frontend"
-            fi
-
-            cd "$HOME/busline-frontend"
-
-            echo "🔐 Writing .env from ENV_FILE secret..."
-            if [ -n "$ENV_FILE" ]; then
-              umask 077
-              printf "%s" "$ENV_FILE" > .env
-            else
-              echo "⚠️ ENV_FILE is empty. Skipping .env creation."
-            fi
-
-            echo "git fetch and reset..."
-            git fetch origin
-            git reset --hard origin/${{ github.ref_name }}
-
-            echo "📦 Installing dependencies and building..."
-            rm -rf node_modules
-            rm -f bun.lock
-
-            npm install
-            npm run generate-api-types
-            npm run build
-
-            echo "🚀 Managing PM2 process..."
-            if ! command -v pm2 >/dev/null 2>&1; then
-              npm install -g pm2
-            fi
-
-            pm2 reload busline-frontend --update-env || pm2 restart busline-frontend || pm2 start npm --name "busline-frontend" -- start
-
-            pm2 status
-            echo "✅ Done!"
+            pm2 reload busline-frontend || pm2 start npm --name "busline-frontend" -- start
+            pm2 save
