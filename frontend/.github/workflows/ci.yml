@@ -17,10 +17,10 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.9
+          bun-version: 1.2.21
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile --linker=isolated
+        run: bun install --frozen-lockfile
 
       - name: Check Formatting
         run: bunx prettier --check .
@@ -61,7 +61,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.9
+          bun-version: 1.2.21
 
       - name: Install and Build (Prepare Artifact)
         env:
