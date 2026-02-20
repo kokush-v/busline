@@ -81,10 +81,5 @@ jobs:
                    --name busline-container \
                    --net=host \
                    --env-file .env \
-                   --log-driver=awslogs \
-                   --log-opt awslogs-region=us-east-1 \
-                   --log-opt awslogs-group=busline-docker-logs \
-                   --log-opt awslogs-stream=busline-container \
-                   --log-opt awslogs-create-group=true \
                    --restart unless-stopped \
                    busline-app
