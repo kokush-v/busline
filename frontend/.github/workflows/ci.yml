@@ -37,26 +37,6 @@ jobs:
             exit 1
           fi
 
-      - name: Validate OpenAPI endpoint for Orval
-        run: |
-          set -euo pipefail
-          set -a
-          source .env
-          set +a
-
-          if [ -z "${NEXT_PUBLIC_BACKEND_URL:-}" ]; then
-            echo "❌ NEXT_PUBLIC_BACKEND_URL is missing in .env"
-            exit 1
-          fi
-
-          OPENAPI_URL="${NEXT_PUBLIC_BACKEND_URL%/}/openapi.json"
-          echo "Checking OpenAPI URL: $OPENAPI_URL"
-
-          curl -fsS --retry 3 --retry-delay 2 --max-time 20 "$OPENAPI_URL" -o /tmp/openapi.json
-
-          node -e "JSON.parse(require('fs').readFileSync('/tmp/openapi.json','utf8'))"
-          echo "✅ OpenAPI endpoint is reachable and returns valid JSON"
-
       - name: Generate API Types
         run: bun --env-file=.env x orval
 
