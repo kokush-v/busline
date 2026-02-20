@@ -74,11 +74,11 @@ jobs:
             echo "❌ ENV_FILE is empty. Failing the workflow."
             exit 1
           fi
-          bun install --frozen-lockfile
+          bun install --frozen-lockfile --ignore-scripts
           bun --env-file=.env x orval
           bun run build
           rm -rf node_modules
-          bun install --production
+          bun install --production --ignore-scripts
 
       - name: Copy files to EC2 via SCP
         uses: appleboy/scp-action@v0.1.7
