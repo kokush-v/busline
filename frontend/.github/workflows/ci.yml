@@ -68,6 +68,7 @@ jobs:
         run: |
           printf "%s" "$ENV_FILE" > .env
           bun install --frozen-lockfile
+          bun --env-file=.env x orval
           bun run build
           rm -rf node_modules
           bun install --production
