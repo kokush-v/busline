@@ -63,22 +63,27 @@ jobs:
         with:
           bun-version: 1.2.21
 
-      - name: Install and Build (Prepare Artifact)
+      - name: Write .env
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
           if [ -n "$ENV_FILE" ]; then
-            umask 077
-            printf "%s" "$ENV_FILE" > .env
+            ( umask 077 && printf "%s" "$ENV_FILE" > .env )
           else
             echo "❌ ENV_FILE is empty. Failing the workflow."
             exit 1
           fi
+
+      - name: Install and Build (Prepare Artifact)
+        run: |
           bun install --frozen-lockfile --ignore-scripts
           bun --env-file=.env x orval
           bun run build
           rm -rf node_modules
           bun install --production --ignore-scripts
+
+      - name: Fix permissions for SCP
+        run: chmod -R a+rX .next node_modules .env public
 
       - name: Copy files to EC2 via SCP
         uses: appleboy/scp-action@v0.1.7
