@@ -62,6 +62,9 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
             cd ~/busline-frontend
 
             git pull origin main
@@ -74,5 +77,6 @@ jobs:
             npm cache clean --force
             pm2 flush
 
-            pm2 reload busline-frontend || pm2 start npm --name "busline-frontend" -- start
+            pm2 delete busline-frontend 2>/dev/null || true
+            pm2 start npm --name "busline-frontend" -- start
             pm2 save
