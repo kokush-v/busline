@@ -21,37 +21,20 @@ cognito_service = get_cognito_service()
 router = APIRouter(prefix='/trips', tags=['Trips'])
 
 
-# ---- Public ----
-
-
-@router.get('', response_model=TripListResponse)
-async def get_trips_public(
-    params: TripQueryParams = Depends(),
-    service: TripService = Depends(),
-):
-    """Get trips with filtering, sorting, and pagination."""
-    trips, total = await service.get_trips(params)
-
-    return TripListResponse(
-        items=trips,
-        total=total,
-        limit=params.limit,
-        offset=params.offset,
-    )
-
-
-@router.get('/{trip_id}', response_model=TripReadPublic)
-async def get_trip_public(trip_id: UUID, service: TripService = Depends()):
-    return await service.get_trip(trip_id)
-
-
-@router.get('/{trip_id}/seats', response_model=list[SeatRead])
-async def get_trip_seats(trip_id: UUID, service: TripService = Depends()):
-    """Get all seats for a specific trip."""
-    return await service.get_seats(trip_id)
-
-
 # ---- Admin ----
+
+
+@router.post(
+    '',
+    response_model=TripRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_trip(
+    payload: TripCreate,
+    service: TripService = Depends(),
+    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
+):
+    return await service.create_trip(payload)
 
 
 @router.get('/admin', response_model=TripAdminListResponse)
@@ -80,19 +63,6 @@ async def get_trip(
     return await service.get_trip(trip_id)
 
 
-@router.post(
-    '',
-    response_model=TripRead,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_trip(
-    payload: TripCreate,
-    service: TripService = Depends(),
-    _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
-):
-    return await service.create_trip(payload)
-
-
 @router.put(
     '/{trip_id}',
     response_model=TripRead,
@@ -116,3 +86,33 @@ async def delete_trip(
     _: dict = Depends(cognito_service.roles_required([UserRoleGroups.ADMIN])),
 ):
     await service.delete_trip(trip_id)
+
+
+# ---- Public ----
+
+
+@router.get('', response_model=TripListResponse)
+async def get_trips_public(
+    params: TripQueryParams = Depends(),
+    service: TripService = Depends(),
+):
+    """Get trips with filtering, sorting, and pagination."""
+    trips, total = await service.get_trips(params)
+
+    return TripListResponse(
+        items=trips,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
+
+
+@router.get('/{trip_id}', response_model=TripReadPublic)
+async def get_trip_public(trip_id: UUID, service: TripService = Depends()):
+    return await service.get_trip(trip_id)
+
+
+@router.get('/{trip_id}/seats', response_model=list[SeatRead])
+async def get_trip_seats(trip_id: UUID, service: TripService = Depends()):
+    """Get all seats for a specific trip."""
+    return await service.get_seats(trip_id)
