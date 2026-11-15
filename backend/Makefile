@@ -93,7 +93,7 @@ format:
 	poetry run ruff format app/
 
 connect-ec2:
-	ssh -i "busline-backend-key.pem" ubuntu@ec2-host.example.com
+	ssh -i "$(EC2_KEY)" ubuntu@$(EC2_HOST)
 
 open-db-conn:
 	./open-db-connection.sh

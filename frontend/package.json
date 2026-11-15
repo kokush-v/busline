@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "generate-api-types": "orval",
-    "prepare": "husky"
+    "prepare": "cd .. && husky frontend/.husky"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

@@ -1,10 +1,16 @@
-name: Busline CI/CD
+name: Busline Frontend CI/CD
 
 on:
   push:
     branches: ["main"]
+    paths: ["frontend/**", ".github/workflows/frontend-ci.yml"]
   pull_request:
     branches: ["main"]
+    paths: ["frontend/**", ".github/workflows/frontend-ci.yml"]
+
+defaults:
+  run:
+    working-directory: frontend
 
 jobs:
   quality-assurance:
@@ -65,9 +71,14 @@ jobs:
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-            cd ~/busline-frontend
+            if [ ! -d "$HOME/busline/.git" ]; then
+              git clone git@github.com:${{ github.repository }}.git ~/busline
+            fi
 
+            cd ~/busline
             git pull origin main
+
+            cd frontend
 
             npm install
             npx --env-file=.env orval

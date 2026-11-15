@@ -1,3 +1,5 @@
+cd frontend
+
 bun tsc --noEmit
 
 bun lint-staged

@@ -9,4 +9,5 @@ venv/
 .idea
 logs
 aws-layers
-busline-backend-key.pem
+*.pem
+.coverage

@@ -1,10 +1,16 @@
-name: Busline CI/CD
+name: Busline Backend CI/CD
 
 on:
    push:
       branches: ["main"]
+      paths: ["backend/**", ".github/workflows/backend-ci.yml"]
    pull_request:
       branches: ["main"]
+      paths: ["backend/**", ".github/workflows/backend-ci.yml"]
+
+defaults:
+   run:
+      working-directory: backend
 
 jobs:
    quality-assurance:
@@ -47,15 +53,17 @@ jobs:
               key: ${{ secrets.EC2_SSH_KEY }}
               envs: ENV_FILE
               script: |
-                 if [ ! -d "~/busline-backend/.git" ]; then
+                 if [ ! -d "$HOME/busline/.git" ]; then
                    echo "🧹 Cleaning up and cloning..."
-                   rm -rf ~/busline-backend
-                   git clone git@github.com:${{ github.repository }}.git ~/busline-backend
+                   rm -rf ~/busline
+                   git clone git@github.com:${{ github.repository }}.git ~/busline
                  fi
 
-                 cd ~/busline-backend
+                 cd ~/busline
                  git fetch origin
                  git reset --hard origin/${{ github.ref_name }}
+
+                 cd backend
 
                  echo "🔐 Writing .env from ENV_FILE secret..."
                  if [ -n "$ENV_FILE" ]; then
