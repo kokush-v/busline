@@ -1,0 +1,20 @@
+export const routes = {
+  login: "/login",
+  register: "/register",
+  verify: "/verify",
+  profile: "/profile",
+  orderDetails: (id: string) => `/profile/orders/${id}` as const,
+  trips: "/trips",
+  tripDetails: (id: string) => `/trips/${id}` as const,
+  tripBook: (id: string) => `/trips/${id}/book` as const,
+  admin: {
+    dashboard: "/admin/dashboard",
+    cities: "/admin/cities",
+    buses: "/admin/buses",
+    trips: "/admin/trips",
+    stops: "/admin/stops",
+    users: "/admin/users",
+    tripNew: "/admin/trips/new",
+    tripEdit: (id: string) => `/admin/trips/${id}/edit` as const,
+  },
+} as const;
