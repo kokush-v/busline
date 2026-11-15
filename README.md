@@ -9,7 +9,7 @@
 
 ## What is BusLine?
 
-BusLine is a ticketing and management system for intercity and city bus operators.
+BusLine is a ticketing and management system for city bus operators.
 Passengers can search trips, pick a seat, pay online and get a PDF ticket by email.
 Operators get an admin panel to manage cities, stops, buses, trips and users, plus
 analytics on how the network is doing.
